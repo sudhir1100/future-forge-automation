@@ -7,9 +7,9 @@ class AssetManager:
             raise ValueError("PEXELS_API_KEY not found")
         self.headers = {"Authorization": Config.PEXELS_API_KEY}
     
-    def search_video(self, query):
+    def search_video(self, query, orientation="portrait"):
         """Searches Pexels for a video URL."""
-        url = f"https://api.pexels.com/videos/search?query={query}&per_page=1&orientation=portrait"
+        url = f"https://api.pexels.com/videos/search?query={query}&per_page=1&orientation={orientation}"
         try:
             response = requests.get(url, headers=self.headers)
             data = response.json()

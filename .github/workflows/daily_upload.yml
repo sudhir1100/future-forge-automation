@@ -37,4 +37,11 @@ jobs:
         YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
         YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       run: |
-        python -m src.main
+        # Generate Long Video
+        python -m src.main --type long
+        
+        # Clean temp directory for next run
+        rm -rf temp/*
+        
+        # Generate Short Video
+        python -m src.main --type short

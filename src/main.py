@@ -14,24 +14,48 @@ async def main():
     parser = argparse.ArgumentParser(description="Future Forge Automation Engine")
     parser.add_argument("--dry-run", action="store_true", help="Generate video but do not upload")
     parser.add_argument("--topic", type=str, help="Specific topic to generate")
+    parser.add_argument("--type", type=str, choices=["long", "short"], default="long", help="Type of video to generate")
     args = parser.parse_args()
 
     logger.info("Starting Daily Automation...")
     ensure_dir_exists("temp")
     ensure_dir_exists("output")
 
-    # 1. Generate Content
+    # 1. Generate Content (Psychology Niche)
     llm = LLMWrapper()
     
-    topic = args.topic if args.topic else "The Future of Quantum Computing" # Default or fetch from history
-    logger.info(f"Generating script for topic: {topic}")
+    title = args.topic
+    if not title:
+        logger.info("Generating Psychology Titles...")
+        titles = llm.generate_psychology_titles()
+        if not titles:
+            logger.error("Failed to generate titles")
+            return
+        
+        # Select a random title to ensure variety every day
+        import random
+        title = random.choice(titles)
+        
+        # Log all titles for review
+        logger.info("Generated Titles:")
+        for t in titles:
+            logger.info(f"- {t}")
+        logger.info(f"Selected Title: {title}")
     
-    script_data = llm.generate_script(topic)
+    logger.info(f"Generating {args.type} script for Title: {title}")
+    
+    if args.type == "long":
+        script_data = llm.generate_psychology_script(title)
+    else:
+        script_data = llm.generate_psychology_short_script(title)
+
     if not script_data:
-        logger.error("Failed to generate script")
+        logger.error(f"Failed to generate {args.type} script")
         return
 
     logger.info(f"Title: {script_data.get('title')}")
+    if script_data.get('deduced_angle'):
+        logger.info(f"Deduced Angle: {script_data.get('deduced_angle')}")
     
     # 2. Process Scenes
     voice = VoiceEngine()
@@ -46,13 +70,14 @@ async def main():
         await voice.generate_audio(scene['text'], audio_path)
         
         # Visuals
-        video_url = asset_mgr.search_video(scene['visual_keyword'])
+        # Use landscape for long-form, portrait for shorts
+        orientation = "landscape" if args.type == "long" else "portrait"
+        video_url = asset_mgr.search_video(scene['visual_keyword'], orientation=orientation)
         video_path = f"temp/video_{i}.mp4"
         if video_url:
             asset_mgr.download_file(video_url, video_path)
         else:
             logger.warning(f"No video found for {scene['visual_keyword']}")
-            # Create dummy black video or handle fallback later (VideoEditor handles missing files)
         
         processed_scenes.append({
             'audio_path': audio_path,
@@ -62,7 +87,7 @@ async def main():
 
     # 3. Create Video
     editor = VideoEditor()
-    output_file = "output/final_video.mp4"
+    output_file = f"output/final_{args.type}.mp4"
     logger.info("Rendering video...")
     success = editor.create_video(processed_scenes, output_file)
     
