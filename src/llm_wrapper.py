@@ -13,56 +13,65 @@ class LLMWrapper:
         self.model_id = 'gemini-1.5-flash' # Fallback
         
         try:
-            # Self-healing: Find available models to avoid 404s
+            # Self-healing: Find available models that support generation
             print("Fetching available models from Google...")
             models = list(self.client.models.list())
-            available_ids = [m.name for m in models]
-            print(f"DEBUG: Available Models: {available_ids}")
             
-            # Priority list of what we WANT
+            # Filter for models that actually support generation (not embedding/tuning)
+            gen_models = [m for m in models if 'generateContent' in m.supported_actions]
+            available_ids = [m.name for m in gen_models]
+            print(f"DEBUG: Available Generative Models: {available_ids}")
+            
+            # Priority list of what we WANT (using exact names from Google's list)
             preferred = [
+                'models/gemini-2.0-flash',
                 'models/gemini-1.5-flash',
-                'models/gemini-1.5-flash-001',
+                'models/gemini-flash-latest',
                 'models/gemini-1.5-flash-002',
-                'models/gemini-1.5-flash-8b',
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-001'
+                'models/gemini-1.5-flash-001',
+                'models/gemini-1.5-pro',
+                'models/gemini-2.0-flash-lite',
+                'models/gemini-1.0-flash'
             ]
             
-            # Try to find an EXACT match from our preferred list in the available IDs
             found = False
             for p in preferred:
                 if p in available_ids:
                     self.model_id = p
-                    print(f"SUCCESS: Using exact model ID: {self.model_id}")
+                    print(f"SUCCESS: Using model: {self.model_id}")
                     found = True
                     break
             
-            if not found:
-                # Fallback: Just pick anything that has '1.5-flash' in it
+            if not found and available_ids:
+                # Fallback to any flash model if priority fails
                 for aid in available_ids:
-                    if '1.5-flash' in aid.lower():
+                    if 'flash' in aid.lower():
                         self.model_id = aid
-                        print(f"FALLBACK: Using first similar model: {self.model_id}")
+                        print(f"FALLBACK: Using available flash model: {self.model_id}")
                         found = True
                         break
             
-            if not found:
-                print("CRITICAL: No 'gemini-1.5-flash' models found in available list!")
-                self.model_id = available_ids[0] if available_ids else 'gemini-1.5-flash'
-                print(f"DESPERATE FALLBACK: Using: {self.model_id}")
+            if not found and available_ids:
+                # Final fallback to the first generative model
+                self.model_id = available_ids[0]
+                print(f"EMERGENCY FALLBACK: Using: {self.model_id}")
+            elif not found:
+                 print("CRITICAL: No generative models found at all!")
+                 self.model_id = 'models/gemini-1.5-flash' # Hope for the best
 
         except Exception as e:
             print(f"Warning: Could not list models: {e}")
-            self.model_id = 'gemini-1.5-flash' # Final hardcoded fallback
+            self.model_id = 'models/gemini-1.5-flash' # Final hardcoded fallback
 
     def _call_gemini(self, prompt, max_retries=10):
         """Helper to call Gemini with extra-robust exponential backoff for 429s."""
+        # Ensure we always use the full model name if it's not prefixed
+        active_model = self.model_id if self.model_id.startswith('models/') else f"models/{self.model_id}"
+        
         for i in range(max_retries):
             try:
-                # Use generating content from the new SDK client
                 response = self.client.models.generate_content(
-                    model=self.model_id,
+                    model=active_model,
                     contents=prompt
                 )
                 if not response or not response.text:
