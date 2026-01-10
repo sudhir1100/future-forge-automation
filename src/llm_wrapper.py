@@ -1,20 +1,23 @@
 import time
 import json
-import google.generativeai as genai
+from google import genai
 from .config import Config
 
 class LLMWrapper:
     def __init__(self):
         if not Config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
-        genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-flash-latest')
+        self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
+        self.model_id = 'gemini-1.5-flash'
 
     def _call_gemini(self, prompt, max_retries=5):
         """Helper to call Gemini with exponential backoff for 429s."""
         for i in range(max_retries):
             try:
-                response = self.model.generate_content(prompt)
+                response = self.client.models.generate_content(
+                    model=self.model_id,
+                    contents=prompt
+                )
                 return response.text
             except Exception as e:
                 # Check if it's a rate limit error (429)
@@ -109,7 +112,7 @@ class LLMWrapper:
         Title: {title}
         
         Objective: Create a high-retention, loopable 60-second Short script (approx 150-180 words).
-        Tone: Direct, Intimate, Authoritative, "The Hidden Pain".
+        Tone: Direct, Intimate, Authority, "The Hidden Pain".
         
         Structure:
         1. The Hook (0-5s): Stop the scroll. "You might be..." or "If you..."
