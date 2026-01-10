@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+*.mp4
+*.mp3
+*.wav
+*.png
+*.jpg
+temp/
+output/
+client_secrets.json
+credentials.json
+token.json
