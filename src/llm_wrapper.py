@@ -22,16 +22,15 @@ class LLMWrapper:
             available_ids = [m.name for m in gen_models]
             print(f"DEBUG: Available Generative Models: {available_ids}")
             
-            # Priority list of what we WANT (using exact names from Google's list)
+            # Priority list of what we WANT (using exact names confirmed from logs)
             preferred = [
-                'models/gemini-2.0-flash',
-                'models/gemini-1.5-flash',
-                'models/gemini-flash-latest',
+                'models/gemini-2.0-flash',        # Confirmed available and faster
+                'models/gemini-1.5-flash',        # Standard stable
+                'models/gemini-2.0-flash-lite',   # Confirmed available
                 'models/gemini-1.5-flash-002',
                 'models/gemini-1.5-flash-001',
                 'models/gemini-1.5-pro',
-                'models/gemini-2.0-flash-lite',
-                'models/gemini-1.0-flash'
+                'models/gemini-flash-latest'      # Confirmed available
             ]
             
             found = False
