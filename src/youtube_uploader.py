@@ -34,8 +34,8 @@ class YouTubeUploader:
                 'snippet': {
                     'title': title,
                     'description': description,
-                    'tags': ['Future Tech', 'AI', 'Technology', 'Future Forge'],
-                    'categoryId': '28' # Science & Technology
+                    'tags': ['Psychology', 'Human Behavior', 'Mental Health', 'Deep Secrets', 'Archetypes', 'Healing'],
+                    'categoryId': '27' # Education
                 },
                 'status': {
                     'privacyStatus': privacy_status,
