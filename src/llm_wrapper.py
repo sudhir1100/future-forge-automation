@@ -1,3 +1,4 @@
+import time
 import json
 import google.generativeai as genai
 from .config import Config
@@ -8,6 +9,24 @@ class LLMWrapper:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
         genai.configure(api_key=Config.GEMINI_API_KEY)
         self.model = genai.GenerativeModel('gemini-flash-latest')
+
+    def _call_gemini(self, prompt, max_retries=5):
+        """Helper to call Gemini with exponential backoff for 429s."""
+        for i in range(max_retries):
+            try:
+                response = self.model.generate_content(prompt)
+                return response.text
+            except Exception as e:
+                # Check if it's a rate limit error (429)
+                if "429" in str(e) or "ResourceExhausted" in str(e):
+                    wait_time = (2 ** i) + 5 # 5, 7, 9, 13, 21 seconds...
+                    print(f"Rate limited (429). Waiting {wait_time}s before retry {i+1}/{max_retries}...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"Gemini API Error: {e}")
+                    raise e
+        return None
 
     def generate_psychology_titles(self):
         """Generates 20 viral psychology titles."""
@@ -32,8 +51,9 @@ class LLMWrapper:
         ["Title 1", "Title 2", ...]
         """
         try:
-            response = self.model.generate_content(prompt)
-            clean_text = response.text.replace("```json", "").replace("```", "").strip()
+            text = self._call_gemini(prompt)
+            if not text: return []
+            clean_text = text.replace("```json", "").replace("```", "").strip()
             return json.loads(clean_text)
         except Exception as e:
             print(f"Error generating titles: {e}")
@@ -74,11 +94,9 @@ class LLMWrapper:
         Create enough scenes to cover 12-20 minutes of narration (approx 1800-3000 words).
         """
         try:
-            # Increase max tokens if possible, but default is usually sufficient for text. 
-            # Note: Gemini 1.5 Flash has large context window but output limit is 8192 tokens. 
-            # 3000 words is ~4000 tokens, so it fits.
-            response = self.model.generate_content(prompt)
-            clean_text = response.text.replace("```json", "").replace("```", "").strip()
+            text = self._call_gemini(prompt)
+            if not text: return None
+            clean_text = text.replace("```json", "").replace("```", "").strip()
             return json.loads(clean_text)
         except Exception as e:
             print(f"Error generating script: {e}")
@@ -114,8 +132,9 @@ class LLMWrapper:
         }}
         """
         try:
-            response = self.model.generate_content(prompt)
-            clean_text = response.text.replace("```json", "").replace("```", "").strip()
+            text = self._call_gemini(prompt)
+            if not text: return None
+            clean_text = text.replace("```json", "").replace("```", "").strip()
             return json.loads(clean_text)
         except Exception as e:
             print(f"Error generating short script: {e}")
