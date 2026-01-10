@@ -14,28 +14,47 @@ class LLMWrapper:
         
         try:
             # Self-healing: Find available models to avoid 404s
-            models = self.client.models.list()
+            print("Fetching available models from Google...")
+            models = list(self.client.models.list())
             available_ids = [m.name for m in models]
+            print(f"DEBUG: Available Models: {available_ids}")
             
-            # Prefer specific versions if 'gemini-1.5-flash' is 404ing
-            # Many regions need 'gemini-1.5-flash-001' or 'gemini-1.5-flash-002'
-            priority = [
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-002',
-                'gemini-1.5-flash-001',
-                'gemini-1.5-flash-8b',
+            # Priority list of what we WANT
+            preferred = [
                 'models/gemini-1.5-flash',
-                'models/gemini-1.5-flash-001'
+                'models/gemini-1.5-flash-001',
+                'models/gemini-1.5-flash-002',
+                'models/gemini-1.5-flash-8b',
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-001'
             ]
             
-            for p in priority:
-                # The SDK might return names with or without the 'models/' prefix
-                if p in available_ids or f"models/{p}" in available_ids:
+            # Try to find an EXACT match from our preferred list in the available IDs
+            found = False
+            for p in preferred:
+                if p in available_ids:
                     self.model_id = p
-                    print(f"Auto-selected available model: {self.model_id}")
+                    print(f"SUCCESS: Using exact model ID: {self.model_id}")
+                    found = True
                     break
+            
+            if not found:
+                # Fallback: Just pick anything that has '1.5-flash' in it
+                for aid in available_ids:
+                    if '1.5-flash' in aid.lower():
+                        self.model_id = aid
+                        print(f"FALLBACK: Using first similar model: {self.model_id}")
+                        found = True
+                        break
+            
+            if not found:
+                print("CRITICAL: No 'gemini-1.5-flash' models found in available list!")
+                self.model_id = available_ids[0] if available_ids else 'gemini-1.5-flash'
+                print(f"DESPERATE FALLBACK: Using: {self.model_id}")
+
         except Exception as e:
-            print(f"Warning: Could not list models, falling back to default: {e}")
+            print(f"Warning: Could not list models: {e}")
+            self.model_id = 'gemini-1.5-flash' # Final hardcoded fallback
 
     def _call_gemini(self, prompt, max_retries=10):
         """Helper to call Gemini with extra-robust exponential backoff for 429s."""
