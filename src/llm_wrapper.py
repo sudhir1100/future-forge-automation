@@ -8,108 +8,99 @@ class LLMWrapper:
         if not Config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
         
-        # We use v1beta by default for maximum model availability
-        self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
-        self.model_id = 'gemini-1.5-flash' # Fallback
+        # Explicitly use v1 API for stability
+        self.client = genai.Client(
+            api_key=Config.GEMINI_API_KEY,
+            http_options={'api_version': 'v1'}
+        )
         
-        try:
-            # Self-healing: Find available models that support generation
-            print("Fetching available models from Google...")
-            models = list(self.client.models.list())
-            
-            # Filter for models that actually support generation (not embedding/tuning)
-            gen_models = [m for m in models if 'generateContent' in m.supported_actions]
-            available_ids = [m.name for m in gen_models]
-            print(f"DEBUG: Available Generative Models: {available_ids}")
-            
-            # Priority list of what we WANT (using exact names confirmed from logs)
-            preferred = [
-                'models/gemini-2.0-flash',        # Confirmed available and faster
-                'models/gemini-1.5-flash',        # Standard stable
-                'models/gemini-2.0-flash-lite',   # Confirmed available
-                'models/gemini-1.5-flash-002',
-                'models/gemini-1.5-flash-001',
-                'models/gemini-1.5-pro',
-                'models/gemini-flash-latest'      # Confirmed available
-            ]
-            
-            found = False
-            for p in preferred:
-                if p in available_ids:
-                    self.model_id = p
-                    print(f"SUCCESS: Using model: {self.model_id}")
-                    found = True
-                    break
-            
-            if not found and available_ids:
-                # Fallback to any flash model if priority fails
-                for aid in available_ids:
-                    if 'flash' in aid.lower():
-                        self.model_id = aid
-                        print(f"FALLBACK: Using available flash model: {self.model_id}")
-                        found = True
-                        break
-            
-            if not found and available_ids:
-                # Final fallback to the first generative model
-                self.model_id = available_ids[0]
-                print(f"EMERGENCY FALLBACK: Using: {self.model_id}")
-            elif not found:
-                 print("CRITICAL: No generative models found at all!")
-                 self.model_id = 'models/gemini-1.5-flash' # Hope for the best
+        # Priority list of models based on confirmed availability in logs (Jan 2026)
+        self.preferred_models = [
+            'models/gemini-1.5-flash',
+            'models/gemini-2.0-flash',
+            'models/gemini-flash-latest',
+            'models/gemini-1.5-flash-002',
+            'models/gemini-1.5-pro',
+            'models/gemini-2.0-flash-lite',
+            'models/gemini-pro'
+        ]
+        self.available_gen_models = []
+        self._refresh_available_models()
 
+    def _refresh_available_models(self):
+        """Fetches and filters models that support content generation."""
+        try:
+            print("Refreshing available generative models...")
+            models = list(self.client.models.list())
+            self.available_gen_models = [m.name for m in models if 'generateContent' in m.supported_actions]
+            print(f"DEBUG: Confirmed Generative Models: {self.available_gen_models}")
         except Exception as e:
-            print(f"Warning: Could not list models: {e}")
-            self.model_id = 'models/gemini-1.5-flash' # Final hardcoded fallback
+            print(f"Warning: Could not list models, will use hardcoded defaults: {e}")
+            self.available_gen_models = self.preferred_models
 
     def _call_gemini(self, prompt, max_retries=10):
-        """Helper to call Gemini with extra-robust exponential backoff for 429s."""
-        # Ensure we always use the full model name if it's not prefixed
-        active_model = self.model_id if self.model_id.startswith('models/') else f"models/{self.model_id}"
+        """Ultra-robust caller that swaps models if one is rate-limited or missing."""
         
+        # Build an ordered list of models to try for THIS call
+        candidate_models = []
+        for p in self.preferred_models:
+            if p in self.available_gen_models:
+                candidate_models.append(p)
+        
+        # Add any other available models that aren't in our preference list
+        for a in self.available_gen_models:
+            if a not in candidate_models:
+                candidate_models.append(a)
+        
+        if not candidate_models:
+            candidate_models = ['models/gemini-1.5-flash'] # Final desperation
+
+        model_index = 0
         for i in range(max_retries):
+            # Cycle through models if we keep hitting limits
+            current_model = candidate_models[model_index % len(candidate_models)]
+            
             try:
+                # Disable AFC to speed up and save tokens
+                config = {'automatic_function_calling': {'disable': True}}
                 response = self.client.models.generate_content(
-                    model=active_model,
-                    contents=prompt
+                    model=current_model,
+                    contents=prompt,
+                    config=config
                 )
                 if not response or not response.text:
-                    raise ValueError("Empty response from Gemini")
+                    raise ValueError("Empty response")
                 return response.text
+                
             except Exception as e:
-                err_msg = str(e)
-                # Check for rate limit (429) or quota errors (ResourceExhausted)
-                if "429" in err_msg or "ResourceExhausted" in err_msg:
-                    # More aggressive wait: 10, 20, 40, 80, 160... capped at 300
-                    wait_time = min(10 * (2 ** i), 300) 
-                    print(f"Rate limited (429/Quota). Attempt {i+1}/{max_retries}. Waiting {wait_time}s...")
+                err_msg = str(e).lower()
+                
+                # If 404, the model name is definitely wrong or retired, move to next model immediately
+                if "404" in err_msg or "not found" in err_msg:
+                    print(f"Model {current_model} NOT FOUND (404). Swapping...")
+                    model_index += 1
+                    continue
+                
+                # If 429 or Quota, wait and then try the NEXT model to spread load
+                if "429" in err_msg or "resource_exhausted" in err_msg or "quota" in err_msg:
+                    wait_time = min(5 * (2 ** (i // 2)), 60) # 5, 5, 10, 10, 20, 20... capping at 60s
+                    print(f"Rate Limited on {current_model}. Attempt {i+1}/{max_retries}. Swapping models and waiting {wait_time}s...")
+                    model_index += 1
                     time.sleep(wait_time)
                     continue
-                else:
-                    print(f"Gemini API Permanent Error: {err_msg}")
-                    # If it's not a 429, don't retry
-                    return None
+                
+                # If it's a different error (like safety), we might need to stop
+                print(f"Gemini API Error on {current_model}: {e}")
+                if i < 3: # Try a few times even for unknown errors
+                    model_index += 1
+                    continue
+                return None
         return None
 
     def generate_psychology_titles(self):
         """Generates 20 viral psychology titles."""
         prompt = """
-        You are a high-level YouTube title strategist known for creating viral psychology-based content. Your niche focuses on deep archetypes, childhood trauma, emotional neglect, and hidden social dynamics.
-        Objective: Write exactly 20 highly clickable, emotionally intense YouTube titles.
-        
-        Mandatory Rules:
-        For Angle 1 & Angle 2, every title must begin with: “The Psychology of…” or “The Hidden Pain of…”
-        Naturally include powerful psychological keywords such as: PSYCHOLOGY, CHILDHOOD, TRAUMA, QUIET, ANXIOUS, LONELY, HIDDEN, PAIN, NEGLECTED, SILENT, SELF-SABOTAGE
-        Highlight 1–2 words in ALL CAPS for emotional impact
-        Add emotional hook tags like: [The Dark Truth], [Life Changing], [Must Watch], [Warning]
-        Each title must be under 80 characters
-        
-        Content Structure (Strictly Follow):
-        Angle 1: Childhood Wounds & Upbringing – 5 Titles ("The Psychology of a Child Who...", "The Lifelong Effect of...")
-        Angle 2: Adult Traits & Social Archetypes – 10 Titles ("The Psychology of People Who...", "Why [Trait] Suffer the Most")
-        Angle 3: Dark Psychology & Power Dynamics – 5 Titles ("The 3 Laws of...", "NEVER Show...", "The Dark Rule of...")
-        
-        STRICT OUTPUT FORMAT:
+        Objective: Write exactly 20 highly clickable, emotionally intense YouTube psychology titles.
         Return ONLY Valid JSON. A simple list of strings.
         ["Title 1", "Title 2", ...]
         """
@@ -117,80 +108,57 @@ class LLMWrapper:
             text = self._call_gemini(prompt)
             if not text: return []
             clean_text = text.replace("```json", "").replace("```", "").strip()
+            # Basic JSON extraction if AI includes filler
+            if "[" in clean_text:
+                clean_text = clean_text[clean_text.find("["):clean_text.rfind("]")+1]
             return json.loads(clean_text)
         except Exception as e:
-            print(f"Error generating titles: {e}")
+            print(f"Error parsing titles: {e}")
             return []
 
     def generate_psychology_script(self, title):
         """Generates a long-form psychology script."""
         prompt = f"""
-        You are a Viral Content Writer specializing in long-form, emotionally immersive psychological and philosophical video essays.
-        
         Title: {title}
-        
-        MANDATORY STRATEGIC DEDUCTION STEP:
-        Identify the Core Archetype Angle implied in the title. This must act as the emotional spine.
-        
-        SCRIPT GENERATION INSTRUCTIONS:
-        1. Hook & Core Paradox (2-3 min): Speak directly to viewer ("You"), reveal core paradox.
-        2. Definition & Psychological Authority (3-4 min): Define concepts (Parentification, Hypervigilance, etc), show effect on nervous system.
-        3. Emotional Cost & Philosophical Weight (3-4 min): Loss of authenticity, reference Jung/Seneca/Rilke.
-        4. Adult Patterns & Unlearning (4-5 min): Connect childhood to adult behavior (relationships, career).
-        5. Healing & Closing (3-4 min): Practical tools (Inner Child, Shadow Work), strong quote.
-        
-        STRICT OUTPUT FORMAT:
+        Create a deep psychology video essay script.
         Return ONLY Valid JSON.
         {{
             "title": "{title}",
-            "deduced_angle": "The deduced angle...",
             "scenes": [
                 {{
-                    "section": "Hook",
-                    "text": "The spoken narration for this part...",
-                    "visual_keyword": "A single precise keyword for Pexels search (e.g. 'Lonely Child', 'Stormy Sea')",
-                    "visual_prompt": "An oil painting of... (detailed prompt for AI image gen)"
+                    "text": "spoken narration...",
+                    "visual_keyword": "keyword for pexels",
+                    "visual_prompt": "prompt for image gen"
                 }},
                 ...
             ]
         }}
-        Create enough scenes to cover 12-20 minutes of narration (approx 1800-3000 words).
         """
         try:
             text = self._call_gemini(prompt)
             if not text: return None
             clean_text = text.replace("```json", "").replace("```", "").strip()
+            if "{" in clean_text:
+                clean_text = clean_text[clean_text.find("{"):clean_text.rfind("}")+1]
             return json.loads(clean_text)
         except Exception as e:
-            print(f"Error generating script: {e}")
+            print(f"Error parsing script: {e}")
             return None
 
     def generate_psychology_short_script(self, title):
         """Generates a 60-second viral psychology short script."""
         prompt = f"""
-        You are a generic YouTube Shorts strategist specializing in dark, viral psychology.
         Title: {title}
-        
-        Objective: Create a high-retention, loopable 60-second Short script (approx 150-180 words).
-        Tone: Direct, Intimate, Authority, "The Hidden Pain".
-        
-        Structure:
-        1. The Hook (0-5s): Stop the scroll. "You might be..." or "If you..."
-        2. The Reveal (5-20s): Explain the hidden psychological mechanism.
-        3. The Cost (20-40s): Why this hurts/ruins relationships.
-        4. The Fix/Closing (40-60s): One powerful sentence of advice.
-        
-        STRICT OUTPUT FORMAT:
+        Create a 60-second viral psychology short script.
         Return ONLY Valid JSON.
         {{
             "title": "{title}",
             "scenes": [
                 {{
-                    "text": "Spoken text...",
-                    "visual_keyword": "Visual keyword for Pexels (portrait)",
-                    "visual_prompt": "Oil painting style prompt..."
-                }},
-                ...
+                    "text": "spoken text...",
+                    "visual_keyword": "keyword",
+                    "visual_prompt": "prompt"
+                }}
             ]
         }}
         """
@@ -198,7 +166,9 @@ class LLMWrapper:
             text = self._call_gemini(prompt)
             if not text: return None
             clean_text = text.replace("```json", "").replace("```", "").strip()
+            if "{" in clean_text:
+                clean_text = clean_text[clean_text.find("{"):clean_text.rfind("}")+1]
             return json.loads(clean_text)
         except Exception as e:
-            print(f"Error generating short script: {e}")
+            print(f"Error parsing short script: {e}")
             return None
