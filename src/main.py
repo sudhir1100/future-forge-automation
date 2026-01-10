@@ -6,6 +6,7 @@ from src.llm_wrapper import LLMWrapper
 from src.voice_engine import VoiceEngine
 from src.asset_manager import AssetManager
 from src.video_editor import VideoEditor
+from src.youtube_uploader import YouTubeUploader
 
 logger = setup_logging()
 
@@ -69,8 +70,6 @@ async def main():
         logger.info(f"Video generated successfully: {output_file}")
     else:
         logger.error("Video generation failed")
-
-from src.youtube_uploader import YouTubeUploader
 
     if not args.dry_run and success:
         logger.info("Starting Upload Process...")
