@@ -117,18 +117,33 @@ class LLMWrapper:
             return []
 
     def generate_psychology_script(self, title):
-        """Generates a long-form psychology script."""
+        """Generates a long-form psychology script with elite metadata."""
         prompt = f"""
         Title: {title}
-        Create a deep psychology video essay script.
-        Return ONLY Valid JSON.
+        
+        Act as a lead writer for a top-tier US psychology channel (style: Psych2Go / The School of Life).
+        Tone: Empathetic, authoritative, narrative-driven, and deep.
+        
+        STRUCTURE:
+        1. THE HOOK (0-30s): Start with a relatable emotional paradox or a "Why do we..." question that creates an immediate curiosity gap.
+        2. THE JOURNEY: Deeply explore the psychological mechanisms. Use "You" and "We" to build trust.
+        3. THE REVELATION: Provide a profound insight or a shift in perspective.
+        4. THE HEALING: End with actionable philosophical advice or a powerful quote.
+        
+        METADATA RULES:
+        - Description: Write a 150-word soul-stirring summary of the video. 
+        - DO NOT mention "AI", "Future Forge", or "Automation". 
+        - Use ONLY psychology-relevant hashtags: #Psychology #MentalHealth #Healing #Growth #DeepSecrets
+        
+        STRICT OUTPUT FORMAT (Valid JSON ONLY):
         {{
             "title": "{title}",
+            "description": "The professional description...",
             "scenes": [
                 {{
-                    "text": "spoken narration...",
-                    "visual_keyword": "keyword for pexels",
-                    "visual_prompt": "prompt for image gen"
+                    "text": "The spoken narration...",
+                    "visual_keyword": "Precise Pexels keyword",
+                    "visual_prompt": "Cinematic oil painting prompt"
                 }},
                 ...
             ]

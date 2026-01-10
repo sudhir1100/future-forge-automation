@@ -54,23 +54,26 @@ class VideoEditor:
                 # Set Audio
                 video_clip = video_clip.set_audio(audio_clip)
 
-                # Add Text Overlay (Simple Subtitle)
-                # Ensure the caption box fits within the frame with some margin
-                txt_w = int(target_w * 0.8)
-                txt_clip = TextClip(
-                    scene['text'], 
-                    fontsize=70 if is_short else 50, 
-                    color='white', 
-                    font='Liberation-Sans-Bold', 
-                    stroke_color='black', 
-                    stroke_width=2, 
-                    size=(txt_w, None), 
-                    method='caption'
-                )
-                txt_clip = txt_clip.set_pos('center').set_duration(duration)
-                
                 # Composite
-                final_scene = CompositeVideoClip([video_clip, txt_clip])
+                if is_short:
+                    # Add Text Overlay (Simple Subtitle) for Shorts
+                    txt_w = int(target_w * 0.8)
+                    txt_clip = TextClip(
+                        scene['text'], 
+                        fontsize=70, 
+                        color='white', 
+                        font='Liberation-Sans-Bold', 
+                        stroke_color='black', 
+                        stroke_width=2, 
+                        size=(txt_w, None), 
+                        method='caption'
+                    )
+                    txt_clip = txt_clip.set_pos('center').set_duration(duration)
+                    final_scene = CompositeVideoClip([video_clip, txt_clip])
+                else:
+                    # No text overlay for Long-form (Cinematic Style)
+                    final_scene = video_clip
+                
                 clips.append(final_scene)
                 
             except Exception as e:
