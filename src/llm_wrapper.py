@@ -7,12 +7,35 @@ class LLMWrapper:
     def __init__(self):
         if not Config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
-        # Explicitly use v1 API to avoid v1beta 404 issues
-        self.client = genai.Client(
-            api_key=Config.GEMINI_API_KEY,
-            http_options={'api_version': 'v1'}
-        )
-        self.model_id = 'gemini-1.5-flash'
+        
+        # We use v1beta by default for maximum model availability
+        self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
+        self.model_id = 'gemini-1.5-flash' # Fallback
+        
+        try:
+            # Self-healing: Find available models to avoid 404s
+            models = self.client.models.list()
+            available_ids = [m.name for m in models]
+            
+            # Prefer specific versions if 'gemini-1.5-flash' is 404ing
+            # Many regions need 'gemini-1.5-flash-001' or 'gemini-1.5-flash-002'
+            priority = [
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-002',
+                'gemini-1.5-flash-001',
+                'gemini-1.5-flash-8b',
+                'models/gemini-1.5-flash',
+                'models/gemini-1.5-flash-001'
+            ]
+            
+            for p in priority:
+                # The SDK might return names with or without the 'models/' prefix
+                if p in available_ids or f"models/{p}" in available_ids:
+                    self.model_id = p
+                    print(f"Auto-selected available model: {self.model_id}")
+                    break
+        except Exception as e:
+            print(f"Warning: Could not list models, falling back to default: {e}")
 
     def _call_gemini(self, prompt, max_retries=10):
         """Helper to call Gemini with extra-robust exponential backoff for 429s."""
