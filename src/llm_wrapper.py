@@ -10,25 +10,31 @@ class LLMWrapper:
         self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
         self.model_id = 'gemini-1.5-flash'
 
-    def _call_gemini(self, prompt, max_retries=5):
-        """Helper to call Gemini with exponential backoff for 429s."""
+    def _call_gemini(self, prompt, max_retries=10):
+        """Helper to call Gemini with extra-robust exponential backoff for 429s."""
         for i in range(max_retries):
             try:
+                # Use generating content from the new SDK client
                 response = self.client.models.generate_content(
                     model=self.model_id,
                     contents=prompt
                 )
+                if not response or not response.text:
+                    raise ValueError("Empty response from Gemini")
                 return response.text
             except Exception as e:
-                # Check if it's a rate limit error (429)
-                if "429" in str(e) or "ResourceExhausted" in str(e):
-                    wait_time = (2 ** i) + 5 # 5, 7, 9, 13, 21 seconds...
-                    print(f"Rate limited (429). Waiting {wait_time}s before retry {i+1}/{max_retries}...")
+                err_msg = str(e)
+                # Check for rate limit (429) or quota errors (ResourceExhausted)
+                if "429" in err_msg or "ResourceExhausted" in err_msg:
+                    # More aggressive wait: 10, 20, 40, 80, 160... capped at 300
+                    wait_time = min(10 * (2 ** i), 300) 
+                    print(f"Rate limited (429/Quota). Attempt {i+1}/{max_retries}. Waiting {wait_time}s...")
                     time.sleep(wait_time)
                     continue
                 else:
-                    print(f"Gemini API Error: {e}")
-                    raise e
+                    print(f"Gemini API Permanent Error: {err_msg}")
+                    # If it's not a 429, don't retry
+                    return None
         return None
 
     def generate_psychology_titles(self):

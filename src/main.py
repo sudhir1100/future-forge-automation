@@ -44,8 +44,8 @@ async def main():
             logger.info("Generating Psychology Titles...")
             titles = llm.generate_psychology_titles()
             if not titles:
-                logger.error("Failed to generate titles")
-                return
+                logger.error("Failed to generate psychology titles")
+                sys.exit(1)
             
             # Save to cache
             ensure_dir_exists("output")
@@ -70,7 +70,7 @@ async def main():
 
     if not script_data:
         logger.error(f"Failed to generate {args.type} script")
-        return
+        sys.exit(1)
 
     logger.info(f"Title: {script_data.get('title')}")
     if script_data.get('deduced_angle'):
@@ -134,5 +134,10 @@ async def main():
             logger.error(f"Upload process failed: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import sys
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"FATAL ERROR: {e}")
+        sys.exit(1)
 
