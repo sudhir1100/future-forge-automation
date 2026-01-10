@@ -4,11 +4,17 @@ from moviepy.editor import *
 import os
 
 class VideoEditor:
-    def create_video(self, scenes, output_path):
+    def create_video(self, scenes, output_path, is_short=True):
         """
         Stitches visualization, audio and subtitles.
-        scenes: List of dicts with 'video_path', 'audio_path', 'text'
+        is_short: if True (9:16), if False (16:9)
         """
+        # Target Dimensions
+        if is_short:
+            target_w, target_h = 1080, 1920
+        else:
+            target_w, target_h = 1920, 1080
+
         clips = []
         for scene in scenes:
             try:
@@ -26,20 +32,41 @@ class VideoEditor:
                         video_clip = video_clip.subclip(0, duration)
                 else:
                     # Fallback to black screen if video missing
-                    video_clip = ColorClip(size=(1080, 1920), color=(0,0,0), duration=duration)
+                    video_clip = ColorClip(size=(target_w, target_h), color=(0,0,0), duration=duration)
 
-                # Resize to 9:16 aspect ratio (Vertical)
-                # target: 1080x1920
-                video_clip = video_clip.resize(height=1920)
-                if video_clip.w < 1080:
-                     video_clip = video_clip.resize(width=1080)
-                video_clip = video_clip.crop(x1=video_clip.w/2-540, y1=video_clip.h/2-960, width=1080, height=1920)
+                # Resize and crop to target aspect ratio
+                # 1. Resize to fill the target dimensions (preserving aspect ratio)
+                if video_clip.w / video_clip.h > target_w / target_h:
+                    # Video is wider than target
+                    video_clip = video_clip.resize(height=target_h)
+                else:
+                    # Video is taller than target
+                    video_clip = video_clip.resize(width=target_w)
+                
+                # 2. Center crop
+                video_clip = video_clip.crop(
+                    x_center=video_clip.w/2, 
+                    y_center=video_clip.h/2, 
+                    width=target_w, 
+                    height=target_h
+                )
                 
                 # Set Audio
                 video_clip = video_clip.set_audio(audio_clip)
 
                 # Add Text Overlay (Simple Subtitle)
-                txt_clip = TextClip(scene['text'], fontsize=70, color='white', font='Liberation-Sans-Bold', stroke_color='black', stroke_width=2, size=(800, None), method='caption')
+                # Ensure the caption box fits within the frame with some margin
+                txt_w = int(target_w * 0.8)
+                txt_clip = TextClip(
+                    scene['text'], 
+                    fontsize=70 if is_short else 50, 
+                    color='white', 
+                    font='Liberation-Sans-Bold', 
+                    stroke_color='black', 
+                    stroke_width=2, 
+                    size=(txt_w, None), 
+                    method='caption'
+                )
                 txt_clip = txt_clip.set_pos('center').set_duration(duration)
                 
                 # Composite
@@ -51,6 +78,6 @@ class VideoEditor:
         
         if clips:
             final_video = concatenate_videoclips(clips)
-            final_video.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac")
+            final_video.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", temp_audiofile="temp_audio.m4a")
             return True
         return False

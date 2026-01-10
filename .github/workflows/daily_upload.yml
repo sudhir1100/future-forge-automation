@@ -37,9 +37,19 @@ jobs:
         YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
         YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       run: |
+        # Fix ImageMagick security policy for high-res video
+        sudo sed -i 's/policy domain="resource" name="width" value="16KP"/policy domain="resource" name="width" value="64KP"/g' /etc/ImageMagick-6/policy.xml
+        sudo sed -i 's/policy domain="resource" name="height" value="16KP"/policy domain="resource" name="height" value="64KP"/g' /etc/ImageMagick-6/policy.xml
+        sudo sed -i 's/policy domain="resource" name="area" value="128MP"/policy domain="resource" name="area" value="1GP"/g' /etc/ImageMagick-6/policy.xml
+        sudo sed -i 's/policy domain="resource" name="memory" value="256MiB"/policy domain="resource" name="memory" value="2GiB"/g' /etc/ImageMagick-6/policy.xml
+        sudo sed -i 's/policy domain="coder" rights="none" pattern="PDF"/policy domain="coder" rights="read,write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml
+
         # Generate Long Video
         python -m src.main --type long
         
+        # Wait to avoid Gemini free tier rate limits (RPM)
+        sleep 30
+
         # Clean temp directory for next run
         rm -rf temp/*
         

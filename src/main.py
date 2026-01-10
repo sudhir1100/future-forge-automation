@@ -89,7 +89,8 @@ async def main():
     editor = VideoEditor()
     output_file = f"output/final_{args.type}.mp4"
     logger.info("Rendering video...")
-    success = editor.create_video(processed_scenes, output_file)
+    is_short = (args.type == "short")
+    success = editor.create_video(processed_scenes, output_file, is_short=is_short)
     
     if success:
         logger.info(f"Video generated successfully: {output_file}")
