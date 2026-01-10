@@ -39,7 +39,7 @@ class VideoEditor:
                 video_clip = video_clip.set_audio(audio_clip)
 
                 # Add Text Overlay (Simple Subtitle)
-                txt_clip = TextClip(scene['text'], fontsize=70, color='white', font='Arial-Bold', stroke_color='black', stroke_width=2, size=(800, None), method='caption')
+                txt_clip = TextClip(scene['text'], fontsize=70, color='white', font='Liberation-Sans-Bold', stroke_color='black', stroke_width=2, size=(800, None), method='caption')
                 txt_clip = txt_clip.set_pos('center').set_duration(duration)
                 
                 # Composite
