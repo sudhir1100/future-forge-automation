@@ -7,7 +7,11 @@ class LLMWrapper:
     def __init__(self):
         if not Config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
-        self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
+        # Explicitly use v1 API to avoid v1beta 404 issues
+        self.client = genai.Client(
+            api_key=Config.GEMINI_API_KEY,
+            http_options={'api_version': 'v1'}
+        )
         self.model_id = 'gemini-1.5-flash'
 
     def _call_gemini(self, prompt, max_retries=10):
