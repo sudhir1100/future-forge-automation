@@ -4,11 +4,7 @@ google-auth-oauthlib
 google-auth-httplib2
 edge-tts
 requests
-shop
-google-auth-oauthlib
-google-auth-httplib2
-google-api-python-client
 moviepy
-Pillow<10.0.0==1.0.3
+Pillow<10.0.0
 ffmpeg-python
 python-dotenv
