@@ -117,24 +117,17 @@ class LLMWrapper:
             return []
 
     def generate_psychology_script(self, title):
-        """Generates a long-form psychology script with elite metadata."""
+        """Generates a long-form psychology script with 25+ animated scenes."""
         prompt = f"""
         Title: {title}
+        Act as a lead writer for a top-tier US psychology channel.
         
-        Act as a lead writer for a top-tier US psychology channel (style: Psych2Go / The School of Life).
-        Tone: Empathetic, authoritative, narrative-driven, and deep.
-        
-        STRUCTURE:
-        1. THE HOOK (0-30s): Start with a relatable emotional paradox or a "Why do we..." question that creates an immediate curiosity gap.
-        2. THE JOURNEY: Deeply explore the psychological mechanisms. Use "You" and "We" to build trust.
-        3. THE REVELATION: Provide a profound insight or a shift in perspective.
-        4. THE HEALING: End with actionable philosophical advice or a powerful quote.
-        
-        METADATA RULES:
-        - Description: Write a 150-word soul-stirring summary of the video. 
-        - DO NOT mention "AI", "Future Forge", or "Automation". 
-        - Use ONLY psychology-relevant hashtags: #Psychology #MentalHealth #Healing #Growth #DeepSecrets
-        
+        STRICT RULES:
+        1. Break the script into AT LEAST 25 detailed scenes for a high-quality visual experience.
+        2. Visual Style: 'Surrealist Psychological Noir'. Use ink wash textures, moody watercolor, deep shadows, and metaphorical imagery.
+        3. NO REAL HUMANS: Use silhouettes, faceless figures, metaphorical objects (clocks, keys, mirrors), or abstract anatomical sketches.
+        4. Tone: Deep, narrative-driven, and emotionally resonant.
+
         STRICT OUTPUT FORMAT (Valid JSON ONLY):
         {{
             "title": "{title}",
@@ -142,10 +135,9 @@ class LLMWrapper:
             "scenes": [
                 {{
                     "text": "The spoken narration...",
-                    "visual_keyword": "Precise Pexels keyword",
-                    "visual_prompt": "Cinematic oil painting prompt"
+                    "visual_prompt": "A surrealist ink wash of [metaphor], psychological noir style, deep shadows, no real humans, 8k"
                 }},
-                ...
+                ... (repeat for 25+ scenes)
             ]
         }}
         """
@@ -161,19 +153,26 @@ class LLMWrapper:
             return None
 
     def generate_psychology_short_script(self, title):
-        """Generates a 60-second viral psychology short script."""
+        """Generates a 60-second viral psychology short script with 12 animated scenes."""
         prompt = f"""
         Title: {title}
-        Create a 60-second viral psychology short script.
+        Objective: Create a 60-second viral psychology short script.
+        
+        STRICT RULES:
+        1. Break the script into EXACTLY 12 scenes for fast-paced visuals.
+        2. Visual Style: 'Surrealist Psychological Noir'. Ink wash, moody watercolor, metaphorical.
+        3. NO REAL HUMANS: Use silhouettes, abstract figures, or metaphorical symbols.
+        4. Tone: Captivating and fast-paced.
+
         Return ONLY Valid JSON.
         {{
             "title": "{title}",
             "scenes": [
                 {{
-                    "text": "spoken text...",
-                    "visual_keyword": "keyword",
-                    "visual_prompt": "prompt"
-                }}
+                    "text": "spoken text (approx 5 seconds)...",
+                    "visual_prompt": "A cinematic, psychological noir illustration of [metaphor], surreal ink textures, no humans, 8k"
+                }},
+                ... (repeat for 12 scenes)
             ]
         }}
         """

@@ -22,16 +22,28 @@ class VideoEditor:
                 audio_clip = AudioFileClip(scene['audio_path'])
                 duration = audio_clip.duration
                 
-                # Load Video
-                if os.path.exists(scene['video_path']):
-                    video_clip = VideoFileClip(scene['video_path'])
-                    # Loop video if shorter than audio, or cut if longer
-                    if video_clip.duration < duration:
-                        video_clip = video_clip.loop(duration=duration)
+                # Load Visual (Video OR Image)
+                v_path = scene['video_path']
+                if os.path.exists(v_path):
+                    if v_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        # It's an image - Apply Zoom Animation
+                        video_clip = ImageClip(v_path).set_duration(duration)
+                        
+                        # Apply subtle centered zoom-in effect (from 1.0 to 1.15)
+                        # We resize first to ensure we have room to zoom without black bars
+                        video_clip = video_clip.resize(height=target_h) if is_short else video_clip.resize(width=target_w)
+                        video_clip = video_clip.resize(lambda t: 1.0 + 0.15 * (t/duration))
+                        video_clip = video_clip.set_position('center')
                     else:
-                        video_clip = video_clip.subclip(0, duration)
+                        # It's a video
+                        video_clip = VideoFileClip(v_path)
+                        # Loop video if shorter than audio, or cut if longer
+                        if video_clip.duration < duration:
+                            video_clip = video_clip.loop(duration=duration)
+                        else:
+                            video_clip = video_clip.subclip(0, duration)
                 else:
-                    # Fallback to black screen if video missing
+                    # Fallback to black screen if visual missing
                     video_clip = ColorClip(size=(target_w, target_h), color=(0,0,0), duration=duration)
 
                 # Resize and crop to target aspect ratio

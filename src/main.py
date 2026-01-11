@@ -91,12 +91,12 @@ async def main():
         # Visuals
         # Use landscape for long-form, portrait for shorts
         orientation = "landscape" if args.type == "long" else "portrait"
-        video_url = asset_mgr.search_video(scene['visual_keyword'], orientation=orientation)
-        video_path = f"temp/video_{i}.mp4"
-        if video_url:
-            asset_mgr.download_file(video_url, video_path)
-        else:
-            logger.warning(f"No video found for {scene['visual_keyword']}")
+        video_path = f"temp/visual_{i}.jpg"
+        
+        prompt = scene.get('visual_prompt', scene.get('text'))
+        logger.info(f"Generating Image with prompt: {prompt}")
+        
+        asset_mgr.generate_image(prompt, video_path, orientation=orientation)
         
         processed_scenes.append({
             'audio_path': audio_path,

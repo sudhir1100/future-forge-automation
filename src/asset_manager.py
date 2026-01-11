@@ -36,3 +36,18 @@ class AssetManager:
         except Exception as e:
             print(f"Error downloading {url}: {e}")
             return False
+
+    def generate_image(self, prompt, output_path, orientation="portrait"):
+        """Generates an image using Pollinations.ai (Free)."""
+        import urllib.parse
+        encoded_prompt = urllib.parse.quote(prompt)
+        
+        # Dimensions for Pollinations
+        if orientation == "portrait":
+            width, height = 1080, 1920
+        else:
+            width, height = 1920, 1080
+            
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true&enhance=true"
+        
+        return self.download_file(url, output_path)
