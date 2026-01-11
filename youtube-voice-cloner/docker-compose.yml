@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  voice-cloning:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./samples:/app/samples
+      - ./output:/app/output
+      - ./scripts:/app/scripts
+    environment:
+      - TTS_USE_CPU=1 # Default to CPU unless GPU is mapped

@@ -1,0 +1,7 @@
+outputs/
+__pycache__/
+*.mp3
+*.wav
+*.m4a
+model/
+TTS_models/
