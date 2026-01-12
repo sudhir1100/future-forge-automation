@@ -2,10 +2,10 @@ name: Future Forge Daily Upload
 
 on:
   schedule:
-    # Runs at 13:00 UTC every day (8 AM EST / 2 PM CET)
-    # This allows 1-2 hours for GitHub delays + 20 mins processing
-    # Ensures delivery before the US Lunch and Evening peak hours.
-    - cron: '0 13 * * *'
+    # Runs at 10:00 UTC every day (5 AM EST / 2 PM GST)
+    # This provides a 4-5 hour buffer for GitHub delays and YouTube processing
+    # Ensures videos are fully indexed before the US 10 AM - 1 PM (EST) educational peak.
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       topic:
