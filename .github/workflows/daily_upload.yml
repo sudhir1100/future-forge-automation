@@ -87,3 +87,12 @@ jobs:
           rm -rf temp/*
           python -m src.main --type short --style stickman
         fi
+
+    - name: Persist used topics
+      if: always()
+      run: |
+        git config --global user.name "Future Forge Bot"
+        git config --global user.email "bot@futureforge.ai"
+        git add output/used_topics.json
+        git commit -m "chore: persist used topics [skip ci]" || echo "No changes to commit"
+        git push origin master || echo "Push failed"

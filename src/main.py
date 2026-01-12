@@ -27,47 +27,22 @@ async def main():
     llm = LLMWrapper()
     voice = VoiceEngine()
     
+    from src.trends import TrendEngine
+    trend_engine = TrendEngine()
+    
+    # Select Topic
+    title = args.topic
+    if not title:
+        title = trend_engine.get_viral_topic(llm)
+        if not title:
+            logger.error("Failed to discover a viral topic")
+            sys.exit(1)
+        logger.info(f"Viral Topic Selected: {title}")
+    
     # Override voice for stickman style if requested (Harry-like deep voice)
     if args.style == "stickman":
         voice.voice = "en-GB-RyanNeural" 
         logger.info(f"Using deep voice: {voice.voice}")
-    
-    title = args.topic
-    if not title:
-        cache_file = "output/psychology_titles.json"
-        titles = []
-        
-        # Try to load from cache first
-        if os.path.exists(cache_file):
-            logger.info(f"Loading titles from cache: {cache_file}")
-            try:
-                import json
-                with open(cache_file, 'r') as f:
-                    titles = json.load(f)
-            except Exception as e:
-                logger.warning(f"Failed to load cache: {e}")
-        
-        # If no cache or empty, generate new
-        if not titles:
-            logger.info("Generating Psychology Titles...")
-            titles = llm.generate_psychology_titles()
-            if not titles:
-                logger.error("Failed to generate psychology titles")
-                sys.exit(1)
-            
-            # Save to cache
-            ensure_dir_exists("output")
-            import json
-            with open(cache_file, 'w') as f:
-                json.dump(titles, f, indent=2)
-            logger.info(f"Titles saved to cache: {cache_file}")
-        
-        # Select a random title to ensure variety every day
-        import random
-        title = random.choice(titles)
-        
-        # Log selected title
-        logger.info(f"Selected Title: {title}")
     
     logger.info(f"Generating {args.type} script for Title: {title}")
     
