@@ -27,32 +27,49 @@ class VideoEditor:
                 v_path = scene['video_path']
                 if os.path.exists(v_path):
                     if v_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        # It's an image - Apply Randomized Ken Burns Effect
-                        video_clip = ImageClip(v_path).set_duration(duration)
+                        # It's an image - Apply Robust Ken Burns Effect
+                        img_clip = ImageClip(v_path).set_duration(duration)
                         
-                        # Base resize to fill screen
-                        if is_short:
-                            video_clip = video_clip.resize(height=target_h)
-                        else:
-                            video_clip = video_clip.resize(width=target_w)
-                        
-                        # Apply one of 4 random animations
+                        # Select random animation
                         anim_type = random.choice(['zoom_in', 'zoom_out', 'pan_left', 'pan_right'])
-                        zoom_factor = 0.15
                         
+                        # For Ken Burns, start with a clip slightly larger than target
+                        # to avoid black edges during pan/zoom
+                        base_scale = 1.3
+                        
+                        if is_short:
+                            img_clip = img_clip.resize(height=int(target_h * base_scale))
+                        else:
+                            img_clip = img_clip.resize(width=int(target_w * base_scale))
+                            
+                        # Centered Crop as base
+                        img_clip = img_clip.crop(
+                            x_center=img_clip.w/2, 
+                            y_center=img_clip.h/2, 
+                            width=int(target_w * 1.1), 
+                            height=int(target_h * 1.1)
+                        )
+                        
+                        # Apply dynamic animation
                         if anim_type == 'zoom_in':
-                            video_clip = video_clip.resize(lambda t: 1.0 + zoom_factor * (t/duration))
+                            video_clip = img_clip.resize(lambda t: 1.0 + 0.15 * (t/duration))
                         elif anim_type == 'zoom_out':
-                            video_clip = video_clip.resize(lambda t: (1.0 + zoom_factor) - zoom_factor * (t/duration))
+                            video_clip = img_clip.resize(lambda t: 1.15 - 0.15 * (t/duration))
                         elif anim_type == 'pan_left':
-                            # Slight zoom to allow pannes
-                            video_clip = video_clip.resize(1.2)
-                            video_clip = video_clip.set_position(lambda t: (int(-0.1 * target_w * (t/duration)), 'center'))
+                            # Dynamic position for pan
+                            video_clip = img_clip.set_position(lambda t: (int(-0.1 * target_w * (t/duration)), 'center'))
                         elif anim_type == 'pan_right':
-                            video_clip = video_clip.resize(1.2)
-                            video_clip = video_clip.set_position(lambda t: (int(-0.1 * target_w * (1 - t/duration)), 'center'))
+                            video_clip = img_clip.set_position(lambda t: (int(-0.1 * target_w * (1 - t/duration)), 'center'))
+                        else:
+                            video_clip = img_clip
+                            
+                        # Final resize to fit target exactly (if needed) and ensure it's centered
+                        if anim_type.startswith('zoom'):
+                            video_clip = video_clip.set_position('center')
                         
-                        video_clip = video_clip.set_position('center')
+                        # Ensure we crop to target dimensions
+                        video_clip = video_clip.crop(x_center=video_clip.w/2, y_center=video_clip.h/2, width=target_w, height=target_h)
+
                     else:
                         # It's a video
                         video_clip = VideoFileClip(v_path)
@@ -60,16 +77,16 @@ class VideoEditor:
                             video_clip = video_clip.loop(duration=duration)
                         else:
                             video_clip = video_clip.subclip(0, duration)
+                        
+                        # Consistent resize/crop for video
+                        if video_clip.w / video_clip.h > target_w / target_h:
+                            video_clip = video_clip.resize(height=target_h)
+                        else:
+                            video_clip = video_clip.resize(width=target_w)
+                        video_clip = video_clip.crop(x_center=video_clip.w/2, y_center=video_clip.h/2, width=target_w, height=target_h)
                 else:
                     video_clip = ColorClip(size=(target_w, target_h), color=(0,0,0), duration=duration)
 
-                # Consistent resize/crop to target dimensions
-                if video_clip.w / video_clip.h > target_w / target_h:
-                    video_clip = video_clip.resize(height=target_h)
-                else:
-                    video_clip = video_clip.resize(width=target_w)
-                
-                video_clip = video_clip.crop(x_center=video_clip.w/2, y_center=video_clip.h/2, width=target_w, height=target_h)
                 video_clip = video_clip.set_audio(audio_clip)
 
                 # Add Crossfade Transition (except for the first clip)
