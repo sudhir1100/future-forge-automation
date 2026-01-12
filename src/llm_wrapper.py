@@ -202,8 +202,9 @@ class LLMWrapper:
         2. Hook: Start with a powerful, relatable hook that grabs attention instantly.
         3. Humor: Add light humor and simple real-life examples throughout.
         4. Curiosity: Keep the audience curious until the very end.
-        5. Visual Style: STICK FIGURE STYLE on a PLAIN WHITE BACKGROUND. Minimalist and clean.
+        5. Visual Style: STICK FIGURE STYLE on a PLAIN WHITE BACKGROUND. Minimalist and clean black lines.
         6. Length: Around {char_count} characters.
+        7. Visual Relevancy: Every 'visual_prompt' MUST be a unique, relatable, and creative illustration of the specific spoken 'text' for that scene. Avoid repetitive actions. If the text mentions 'thinking', show the stick figure with a giant brain. If it mentions 'busy', show multiple arms. Be metaphorical and funny.
         
         FORMAT (Valid JSON ONLY):
         {{
@@ -211,7 +212,7 @@ class LLMWrapper:
             "scenes": [
                 {{
                     "text": "spoken narration...",
-                    "visual_prompt": "A minimalist simple black stick figure on a plain white background doing [action], doodle style, clean lines, no background details"
+                    "visual_prompt": "A minimalist simple black stick figure on a plain white background [creative action relatable to the text above], doodle style, clean lines, no background details"
                 }},
                 ... (repeat for {scene_count} scenes)
             ]
