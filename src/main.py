@@ -70,7 +70,8 @@ async def main():
         
         # Audio
         audio_path = f"temp/audio_{i}.mp3"
-        await voice.generate_audio(scene['text'], audio_path)
+        mood = scene.get('audio_mood', 'neutral')
+        await voice.generate_audio(scene['text'], audio_path, mood=mood)
         
         # Visuals
         # Use landscape for long-form, portrait for shorts
