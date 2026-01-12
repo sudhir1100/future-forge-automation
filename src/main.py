@@ -12,14 +12,14 @@ from src.youtube_uploader import YouTubeUploader
 logger = setup_logging()
 
 async def main():
-    parser = argparse.ArgumentParser(description="Future Forge Automation Engine")
+    parser = argparse.ArgumentParser(description="Media Generation Engine")
     parser.add_argument("--dry-run", action="store_true", help="Generate video but do not upload")
     parser.add_argument("--topic", type=str, help="Specific topic to generate")
     parser.add_argument("--type", type=str, choices=["long", "short"], default="long", help="Type of video to generate")
     parser.add_argument("--style", type=str, choices=["noir", "stickman"], default="noir", help="Visual style of the video")
     args = parser.parse_args()
 
-    logger.info(f"Starting Daily Automation in {args.style} style...")
+    logger.info(f"Starting Media Automation in {args.style} style...")
     ensure_dir_exists("temp")
     ensure_dir_exists("output")
 
