@@ -29,6 +29,9 @@ on:
           - short
           - long
 
+permissions:
+  contents: write
+
 jobs:
   generate-and-upload:
     runs-on: ubuntu-latest
