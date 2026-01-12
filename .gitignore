@@ -8,8 +8,8 @@ venv/
 
 # Assets & Media
 /temp/
-/output/
-!output/used_topics.json
+/output/*
+!/output/used_topics.json
 /assets/
 !/assets/visuals/
 !/assets/visuals/*
