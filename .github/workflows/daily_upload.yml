@@ -15,11 +15,11 @@ on:
       style:
         description: 'Visual style'
         required: true
-        default: 'noir'
+        default: 'stickman'
         type: choice
         options:
-          - noir
           - stickman
+          - noir
       type:
         description: 'Video type'
         required: true
@@ -81,9 +81,9 @@ jobs:
           echo "Executing: $CMD"
           eval "$CMD"
         else
-          # SCHEDULED RUN: Default behavior
-          python -m src.main --type long --style noir
+          # SCHEDULED RUN: Default behavior (Now Stickman)
+          python -m src.main --type long --style stickman
           sleep 30
           rm -rf temp/*
-          python -m src.main --type short --style noir
+          python -m src.main --type short --style stickman
         fi
