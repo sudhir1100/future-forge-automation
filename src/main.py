@@ -16,14 +16,21 @@ async def main():
     parser.add_argument("--dry-run", action="store_true", help="Generate video but do not upload")
     parser.add_argument("--topic", type=str, help="Specific topic to generate")
     parser.add_argument("--type", type=str, choices=["long", "short"], default="long", help="Type of video to generate")
+    parser.add_argument("--style", type=str, choices=["noir", "stickman"], default="noir", help="Visual style of the video")
     args = parser.parse_args()
 
-    logger.info("Starting Daily Automation...")
+    logger.info(f"Starting Daily Automation in {args.style} style...")
     ensure_dir_exists("temp")
     ensure_dir_exists("output")
 
-    # 1. Generate Content (Psychology Niche)
+    # 1. Generate Content
     llm = LLMWrapper()
+    voice = VoiceEngine()
+    
+    # Override voice for stickman style if requested (Harry-like deep voice)
+    if args.style == "stickman":
+        voice.voice = "en-GB-RyanNeural" 
+        logger.info(f"Using deep voice: {voice.voice}")
     
     title = args.topic
     if not title:
@@ -64,7 +71,9 @@ async def main():
     
     logger.info(f"Generating {args.type} script for Title: {title}")
     
-    if args.type == "long":
+    if args.style == "stickman":
+         script_data = llm.generate_conversational_script(title, type=args.type)
+    elif args.type == "long":
         script_data = llm.generate_psychology_script(title)
     else:
         script_data = llm.generate_psychology_short_script(title)
@@ -78,7 +87,6 @@ async def main():
         logger.info(f"Deduced Angle: {script_data.get('deduced_angle')}")
     
     # 2. Process Scenes
-    voice = VoiceEngine()
     asset_mgr = AssetManager()
     processed_scenes = []
 
@@ -114,7 +122,7 @@ async def main():
     logger.info("Rendering video...")
     is_short = (args.type == "short")
     
-    success = editor.create_video(processed_scenes, output_file, is_short=is_short)
+    success = editor.create_video(processed_scenes, output_file, is_short=is_short, style=args.style)
     
     if success:
         logger.info(f"Video generated successfully: {output_file}")

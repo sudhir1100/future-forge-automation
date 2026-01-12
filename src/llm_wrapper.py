@@ -188,3 +188,42 @@ class LLMWrapper:
         except Exception as e:
             print(f"Error parsing short script: {e}")
             return None
+    def generate_conversational_script(self, topic, type="short"):
+        """Generates a conversational, humorous, human-like script with stick figure visual prompts."""
+        char_count = "7000-9000" if type == "long" else "600-800"
+        scene_count = 25 if type == "long" else 12
+        
+        prompt = f"""
+        Topic: {topic}
+        Role: A charismatic YouTube storyteller who is funny, relatable, and easy to understand.
+        
+        STRICT RULES:
+        1. Tone: Fully human-made, conversational, natural language. No robot-speak.
+        2. Hook: Start with a powerful, relatable hook that grabs attention instantly.
+        3. Humor: Add light humor and simple real-life examples throughout.
+        4. Curiosity: Keep the audience curious until the very end.
+        5. Visual Style: STICK FIGURE STYLE on a PLAIN WHITE BACKGROUND. Minimalist and clean.
+        6. Length: Around {char_count} characters.
+        
+        FORMAT (Valid JSON ONLY):
+        {{
+            "title": "{topic}",
+            "scenes": [
+                {{
+                    "text": "spoken narration...",
+                    "visual_prompt": "A minimalist simple black stick figure on a plain white background doing [action], doodle style, clean lines, no background details"
+                }},
+                ... (repeat for {scene_count} scenes)
+            ]
+        }}
+        """
+        try:
+            text = self._call_gemini(prompt)
+            if not text: return None
+            clean_text = text.replace("```json", "").replace("```", "").strip()
+            if "{" in clean_text:
+                clean_text = clean_text[clean_text.find("{"):clean_text.rfind("}")+1]
+            return json.loads(clean_text)
+        except Exception as e:
+            print(f"Error parsing conversational script: {e}")
+            return None
