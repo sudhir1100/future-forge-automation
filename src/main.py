@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import os
+import sys
 from src.utils import setup_logging, ensure_dir_exists
 from src.llm_wrapper import LLMWrapper
 from src.voice_engine import VoiceEngine
@@ -121,8 +122,9 @@ async def main():
         logger.error("Video generation failed")
 
     if not args.dry_run and success:
-            # 4. Upload to YouTube
-            logger.info("Starting Upload Process...")
+        # 4. Upload to YouTube
+        logger.info("Starting Upload Process...")
+        try:
             uploader = YouTubeUploader()
             
             # Generate Thumbnail
@@ -151,10 +153,8 @@ async def main():
             logger.error(f"Upload process failed: {e}")
 
 if __name__ == "__main__":
-    import sys
     try:
         asyncio.run(main())
     except Exception as e:
         print(f"FATAL ERROR: {e}")
         sys.exit(1)
-
