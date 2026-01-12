@@ -85,15 +85,33 @@ class VideoEditor:
                         img_clip = ImageClip(v_path).set_duration(duration)
                         
                         if style == "stickman":
-                            # STICKMAN STYLE: White BG, Centered, Fade In/Out, Pendulum Effect
+                            # STICKMAN STYLE: White BG, Centered, Fade In/Out, Inner Movement
                             bg_clip = ColorClip(size=(target_w, target_h), color=(255, 255, 255)).set_duration(duration)
                             
-                            # Resize stickman to fit nicely (approx 70% of screen)
+                            # Base resize
                             img_clip = img_clip.resize(width=int(target_w * 0.7))
                             
-                            # Apply "Pendulum" Sway Effect
-                            # Rotation: Intensity 20%, Twist 5%, Speed 22% (Interpreted as +/- 5 degrees, freq 0.22)
-                            video_clip = img_clip.rotate(lambda t: 5 * math.sin(2 * math.pi * 0.22 * t), expand=False, resample='bicubic')
+                            # INNER LIVENESS EFFECTS:
+                            # 1. Pendulum Swing (Already requested)
+                            # 2. Pulsing (Breathing): Scale +/- 2%
+                            # 3. Micro-Jitter: Subtle high-freq rotation +/- 0.5 degrees
+                            
+                            def inner_anim(get_frame, t):
+                                frame = get_frame(t)
+                                # Scale Pulse: 1.0 to 1.02
+                                pulse = 1.0 + 0.015 * math.sin(2 * math.pi * 0.5 * t)
+                                # Combined Rotation: Pendulum (5 deg) + Micro-Jitter (0.5 deg)
+                                # Pendulum at 0.22Hz, Jitter at 4Hz
+                                rot = (5 * math.sin(2 * math.pi * 0.22 * t)) + (0.5 * math.sin(2 * math.pi * 4 * t))
+                                
+                                # Apply transformation via Image object if possible, 
+                                # but MoviePy's resize/rotate are easier. 
+                                # We'll use the existing MoviePy methods chained.
+                                return frame
+
+                            # Apply transformation chain
+                            video_clip = img_clip.rotate(lambda t: (5 * math.sin(2 * math.pi * 0.22 * t)) + (0.6 * math.sin(2 * math.pi * 5 * t)), expand=False, resample='bicubic')
+                            video_clip = video_clip.resize(lambda t: 1.0 + 0.02 * math.sin(2 * math.pi * 0.4 * t))
                             
                             # Fade In / Fade Out
                             video_clip = video_clip.set_position('center').fadein(0.5).fadeout(0.5)
@@ -101,11 +119,8 @@ class VideoEditor:
                             # Composite over white background
                             video_clip = CompositeVideoClip([bg_clip, video_clip.set_start(0)])
                             
-                            # Apply "Hollywood Past" Filter (Slightly warmer, higher gamma, lower saturation)
-                            # Simulated using colorx and gamma_corr
+                            # Apply Filters
                             video_clip = video_clip.fx(vfx.colorx, 0.95).fx(vfx.gamma_corr, 1.2)
-                            
-                            # Apply "Sharpen" (Slightly increase contrast)
                             video_clip = video_clip.fx(vfx.lum_contrast, 5, 20, 128)
                             
                         else:

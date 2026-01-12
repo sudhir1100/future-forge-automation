@@ -11,7 +11,11 @@ class VoiceEngine:
         Generates speech from text using MS Edge TTS.
         """
         try:
-            communicate = edge_tts.Communicate(text, self.voice)
+            # Clean text: Remove markdown emphasis and asterisks that TTS might read aloud
+            import re
+            clean_text = re.sub(r'[*_#~>]', '', text)
+            
+            communicate = edge_tts.Communicate(clean_text, self.voice)
             await communicate.save(output_file)
             return True
         except Exception as e:

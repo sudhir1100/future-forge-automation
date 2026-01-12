@@ -64,3 +64,21 @@ class YouTubeUploader:
         except Exception as e:
             logger.error(f"Failed to upload video: {e}")
             return None
+    def set_thumbnail(self, video_id, thumbnail_path):
+        """Uploads a custom thumbnail for a video."""
+        try:
+            logger.info(f"Uploading thumbnail for {video_id}...")
+            if not os.path.exists(thumbnail_path):
+                logger.error(f"Thumbnail file not found: {thumbnail_path}")
+                return False
+
+            request = self.youtube.thumbnails().set(
+                videoId=video_id,
+                media_body=MediaFileUpload(thumbnail_path)
+            )
+            response = request.execute()
+            logger.info("Thumbnail uploaded successfully.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to upload thumbnail: {e}")
+            return False
