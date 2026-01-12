@@ -6,7 +6,28 @@ on:
     # This allows 1-2 hours for GitHub delays + 20 mins processing
     # Ensures delivery before the US Lunch and Evening peak hours.
     - cron: '0 13 * * *'
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: 'Specific topic to generate'
+        required: false
+        default: ''
+      style:
+        description: 'Visual style'
+        required: true
+        default: 'noir'
+        type: choice
+        options:
+          - noir
+          - stickman
+      type:
+        description: 'Video type'
+        required: true
+        default: 'short'
+        type: choice
+        options:
+          - short
+          - long
 
 jobs:
   generate-and-upload:
@@ -39,21 +60,30 @@ jobs:
         YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
         YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       run: |
-        # Fix ImageMagick security policy for high-res video
+        # Fix ImageMagick security policy
         sudo sed -i 's/policy domain="resource" name="width" value="16KP"/policy domain="resource" name="width" value="64KP"/g' /etc/ImageMagick-6/policy.xml
         sudo sed -i 's/policy domain="resource" name="height" value="16KP"/policy domain="resource" name="height" value="64KP"/g' /etc/ImageMagick-6/policy.xml
         sudo sed -i 's/policy domain="resource" name="area" value="128MP"/policy domain="resource" name="area" value="1GP"/g' /etc/ImageMagick-6/policy.xml
         sudo sed -i 's/policy domain="resource" name="memory" value="256MiB"/policy domain="resource" name="memory" value="2GiB"/g' /etc/ImageMagick-6/policy.xml
         sudo sed -i 's/policy domain="coder" rights="none" pattern="PDF"/policy domain="coder" rights="read,write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml
 
-        # Generate Long Video
-        python -m src.main --type long
-        
-        # Wait to avoid Gemini free tier rate limits (RPM)
-        sleep 30
-
-        # Clean temp directory for next run
-        rm -rf temp/*
-        
-        # Generate Short Video
-        python -m src.main --type short
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          # MANUAL TRIGGER: Use inputs
+          STYLE="${{ github.event.inputs.style }}"
+          TOPIC="${{ github.event.inputs.topic }}"
+          TYPE="${{ github.event.inputs.type }}"
+          
+          CMD="python -m src.main --type $TYPE --style $STYLE"
+          if [ -n "$TOPIC" ]; then
+            CMD="$CMD --topic \"$TOPIC\""
+          fi
+          
+          echo "Executing: $CMD"
+          eval "$CMD"
+        else
+          # SCHEDULED RUN: Default behavior
+          python -m src.main --type long --style noir
+          sleep 30
+          rm -rf temp/*
+          python -m src.main --type short --style noir
+        fi

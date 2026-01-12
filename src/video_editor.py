@@ -1,6 +1,5 @@
 from moviepy.editor import *
-
-
+import moviepy.video.fx.all as vfx
 import os
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -11,6 +10,7 @@ class VideoEditor:
         try:
             # Try to load a font
             try:
+                # Common Windows font paths
                 font = ImageFont.truetype("arialbd.ttf", fontsize)
             except:
                 try:
@@ -18,19 +18,16 @@ class VideoEditor:
                 except:
                     font = ImageFont.load_default()
 
-            # Create an image with transparent background
-            # Note: PIL uses (W, H)
+            # Create an image with transparent background (RGBA)
             img = Image.new('RGBA', size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
             
             # Wrap text manually
             import textwrap
-            lines = textwrap.wrap(text, width=30) # Approx width for line breaks
+            lines = textwrap.wrap(text, width=30) 
             
-            # Calculate total height to center vertically if needed, or just start from top
-            current_h = 0
+            current_h = 10 # Some top padding
             for line in lines:
-                # Use textbbox if available (newer PIL)
                 if hasattr(draw, 'textbbox'):
                     bbox = draw.textbbox((0, 0), line, font=font)
                     w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -39,14 +36,23 @@ class VideoEditor:
                 
                 # Draw stroke
                 if stroke_width > 0:
-                    for offset in range(-stroke_width, stroke_width + 1):
-                        draw.text(((size[0]-w)/2 + offset, current_h), line, font=font, fill=stroke_color)
-                        draw.text(((size[0]-w)/2, current_h + offset), line, font=font, fill=stroke_color)
+                    for offset_x in range(-stroke_width, stroke_width + 1):
+                        for offset_y in range(-stroke_width, stroke_width + 1):
+                            draw.text(((size[0]-w)/2 + offset_x, current_h + offset_y), line, font=font, fill=stroke_color)
 
                 draw.text(((size[0]-w)/2, current_h), line, font=font, fill=color)
-                current_h += h + 10 # Padding
-                
-            return ImageClip(np.array(img)).set_duration(duration)
+                current_h += h + 15
+            
+            # Convert to RGB array for MoviePy and also get alpha channel
+            rgb_img = img.convert('RGB')
+            alpha_img = img.convert('L') # Luminance as alpha
+            
+            # Create clip with mask for transparency
+            clip = ImageClip(np.array(rgb_img)).set_duration(duration)
+            mask = ImageClip(np.array(alpha_img), ismask=True).set_duration(duration)
+            
+            return clip.set_mask(mask)
+            
         except Exception as e:
             print(f"PIL Text Render failed: {e}")
             return ColorClip(size=size, color=(0,0,0,0), duration=duration)
