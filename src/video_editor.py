@@ -85,43 +85,27 @@ class VideoEditor:
                         img_clip = ImageClip(v_path).set_duration(duration)
                         
                         if style == "stickman":
-                            # STICKMAN STYLE: White BG, Centered, Fade In/Out, Inner Movement
+                            # STICKMAN STYLE: Pure White BG, Centered, Fade In/Out, Pleasant Liveness
                             bg_clip = ColorClip(size=(target_w, target_h), color=(255, 255, 255)).set_duration(duration)
                             
                             # Base resize
                             img_clip = img_clip.resize(width=int(target_w * 0.7))
                             
-                            # INNER LIVENESS EFFECTS:
-                            # 1. Pendulum Swing (Already requested)
-                            # 2. Pulsing (Breathing): Scale +/- 2%
-                            # 3. Micro-Jitter: Subtle high-freq rotation +/- 0.5 degrees
+                            # PLEASANT LIVENESS EFFECTS:
+                            # 1. Floating: Vertical sway ±15px over 3 seconds
+                            # 2. Breathing: Subtle scaling ±1.5% over 4 seconds
                             
-                            def inner_anim(get_frame, t):
-                                frame = get_frame(t)
-                                # Scale Pulse: 1.0 to 1.02
-                                pulse = 1.0 + 0.015 * math.sin(2 * math.pi * 0.5 * t)
-                                # Combined Rotation: Pendulum (5 deg) + Micro-Jitter (0.5 deg)
-                                # Pendulum at 0.22Hz, Jitter at 4Hz
-                                rot = (5 * math.sin(2 * math.pi * 0.22 * t)) + (0.5 * math.sin(2 * math.pi * 4 * t))
-                                
-                                # Apply transformation via Image object if possible, 
-                                # but MoviePy's resize/rotate are easier. 
-                                # We'll use the existing MoviePy methods chained.
-                                return frame
-
-                            # Apply transformation chain
-                            video_clip = img_clip.rotate(lambda t: (5 * math.sin(2 * math.pi * 0.22 * t)) + (0.6 * math.sin(2 * math.pi * 5 * t)), expand=False, resample='bicubic')
-                            video_clip = video_clip.resize(lambda t: 1.0 + 0.02 * math.sin(2 * math.pi * 0.4 * t))
+                            # Apply Floating (Vertical Sway)
+                            video_clip = img_clip.set_position(lambda t: ('center', (target_h/2 - img_clip.h/2) + 15 * math.sin(2 * math.pi * 0.33 * t)))
+                            
+                            # Apply Breathing (Slow Scaling)
+                            video_clip = video_clip.resize(lambda t: 1.0 + 0.015 * math.sin(2 * math.pi * 0.25 * t))
                             
                             # Fade In / Fade Out
                             video_clip = video_clip.set_position('center').fadein(0.5).fadeout(0.5)
                             
-                            # Composite over white background
+                            # NO FILTERS for stickman to keep background pure white
                             video_clip = CompositeVideoClip([bg_clip, video_clip.set_start(0)])
-                            
-                            # Apply Filters
-                            video_clip = video_clip.fx(vfx.colorx, 0.95).fx(vfx.gamma_corr, 1.2)
-                            video_clip = video_clip.fx(vfx.lum_contrast, 5, 20, 128)
                             
                         else:
                             # NOIR STYLE: Standard animated visuals
