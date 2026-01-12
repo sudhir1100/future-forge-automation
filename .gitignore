@@ -9,7 +9,10 @@ venv/
 # Assets & Media
 /temp/
 /output/
+!output/used_topics.json
 /assets/
+!/assets/visuals/
+!/assets/visuals/*
 *.mp4
 *.mp3
 *.wav
