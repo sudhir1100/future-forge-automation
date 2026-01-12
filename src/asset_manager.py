@@ -38,16 +38,29 @@ class AssetManager:
             return False
 
     def generate_image(self, prompt, output_path, orientation="portrait"):
-        """Generates an image using Pollinations.ai (Free)."""
+        """Generates an image using Pollinations.ai (Free) with enhanced styling."""
         import urllib.parse
-        encoded_prompt = urllib.parse.quote(prompt)
+        
+        # Add flavor tags to the prompt to ensure rich, purely animated visuals
+        enhanced_prompt = f"{prompt}, centered composition, detailed textures, volumetric lighting, high dynamic range, digital art style, no people, no real humans"
+        encoded_prompt = urllib.parse.quote(enhanced_prompt)
         
         # Dimensions for Pollinations
         if orientation == "portrait":
             width, height = 1080, 1920
-        else:
+        elif orientation == "landscape":
             width, height = 1920, 1080
+        else: # Thumbnail
+            width, height = 1280, 720
             
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true&enhance=true"
+        import random
+        seed = random.randint(1, 1000000)
+        
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true&enhance=true&seed={seed}"
         
         return self.download_file(url, output_path)
+
+    def generate_thumbnail(self, title, output_path):
+        """Generates a high-clickability thumbnail image."""
+        prompt = f"Highly evocative, mysterious psychology thumbnail for '{title}', surrealist ink wash, dark moody atmosphere, psychological noir, minimalist, no text, 8k, cinematic"
+        return self.generate_image(prompt, output_path, orientation="thumbnail")

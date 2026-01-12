@@ -91,7 +91,10 @@ async def main():
         # Visuals
         # Use landscape for long-form, portrait for shorts
         orientation = "landscape" if args.type == "long" else "portrait"
-        video_path = f"temp/visual_{i}.jpg"
+        
+        # Save visuals in persistent assets folder for tracking
+        ensure_dir_exists("assets/visuals")
+        video_path = f"assets/visuals/visual_{i}.jpg"
         
         prompt = scene.get('visual_prompt', scene.get('text'))
         logger.info(f"Generating Image with prompt: {prompt}")
@@ -109,6 +112,7 @@ async def main():
     output_file = f"output/final_{args.type}.mp4"
     logger.info("Rendering video...")
     is_short = (args.type == "short")
+    
     success = editor.create_video(processed_scenes, output_file, is_short=is_short)
     
     if success:
@@ -117,17 +121,19 @@ async def main():
         logger.error("Video generation failed")
 
     if not args.dry_run and success:
-        logger.info("Starting Upload Process...")
-        try:
+            # 4. Upload to YouTube
+            logger.info("Starting Upload Process...")
             uploader = YouTubeUploader()
             
-            # Use elite description from LLM, or fallback for shorts
+            # Generate Thumbnail
+            ensure_dir_exists("assets/thumbnails")
+            thumbnail_path = f"assets/thumbnails/thumb_{args.type}.jpg"
+            logger.info(f"Generating Thumbnail for {title}...")
+            asset_mgr.generate_thumbnail(title, thumbnail_path)
+
             description = script_data.get('description')
             if not description:
-                if args.type == "short":
-                    description = f"{script_data.get('title')}\n\n#Psychology #Shorts #Archetypes"
-                else:
-                    description = script_data.get('title')
+                description = f"{script_data.get('title')}\n\n#Psychology #Archetypes"
             
             video_id = uploader.upload_video(
                 output_file, 
@@ -135,7 +141,11 @@ async def main():
                 description, 
                 privacy_status="public"
             )
-            if video_id:
+
+            if video_id and os.path.exists(thumbnail_path):
+                uploader.set_thumbnail(video_id, thumbnail_path)
+                logger.info(f"Successfully uploaded video and set thumbnail: https://youtu.be/{video_id}")
+            elif video_id:
                 logger.info(f"Successfully uploaded video: https://youtu.be/{video_id}")
         except Exception as e:
             logger.error(f"Upload process failed: {e}")

@@ -4,9 +4,9 @@ from moviepy.editor import *
 import os
 
 class VideoEditor:
-    def create_video(self, scenes, output_path, is_short=True):
+    def create_video(self, scenes, output_path, is_short=True, bg_music_path=None):
         """
-        Stitches visualization, audio and subtitles.
+        Stitches visualization, audio and subtitles with dynamic animations and transitions.
         is_short: if True (9:16), if False (16:9)
         """
         # Target Dimensions
@@ -15,8 +15,9 @@ class VideoEditor:
         else:
             target_w, target_h = 1920, 1080
 
+        import random
         clips = []
-        for scene in scenes:
+        for i, scene in enumerate(scenes):
             try:
                 # Load Audio
                 audio_clip = AudioFileClip(scene['audio_path'])
@@ -26,65 +27,86 @@ class VideoEditor:
                 v_path = scene['video_path']
                 if os.path.exists(v_path):
                     if v_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        # It's an image - Apply Zoom Animation
+                        # It's an image - Apply Randomized Ken Burns Effect
                         video_clip = ImageClip(v_path).set_duration(duration)
                         
-                        # Apply subtle centered zoom-in effect (from 1.0 to 1.15)
-                        # We resize first to ensure we have room to zoom without black bars
-                        video_clip = video_clip.resize(height=target_h) if is_short else video_clip.resize(width=target_w)
-                        video_clip = video_clip.resize(lambda t: 1.0 + 0.15 * (t/duration))
+                        # Base resize to fill screen
+                        if is_short:
+                            video_clip = video_clip.resize(height=target_h)
+                        else:
+                            video_clip = video_clip.resize(width=target_w)
+                        
+                        # Apply one of 4 random animations
+                        anim_type = random.choice(['zoom_in', 'zoom_out', 'pan_left', 'pan_right'])
+                        zoom_factor = 0.15
+                        
+                        if anim_type == 'zoom_in':
+                            video_clip = video_clip.resize(lambda t: 1.0 + zoom_factor * (t/duration))
+                        elif anim_type == 'zoom_out':
+                            video_clip = video_clip.resize(lambda t: (1.0 + zoom_factor) - zoom_factor * (t/duration))
+                        elif anim_type == 'pan_left':
+                            # Slight zoom to allow pannes
+                            video_clip = video_clip.resize(1.2)
+                            video_clip = video_clip.set_position(lambda t: (int(-0.1 * target_w * (t/duration)), 'center'))
+                        elif anim_type == 'pan_right':
+                            video_clip = video_clip.resize(1.2)
+                            video_clip = video_clip.set_position(lambda t: (int(-0.1 * target_w * (1 - t/duration)), 'center'))
+                        
                         video_clip = video_clip.set_position('center')
                     else:
                         # It's a video
                         video_clip = VideoFileClip(v_path)
-                        # Loop video if shorter than audio, or cut if longer
                         if video_clip.duration < duration:
                             video_clip = video_clip.loop(duration=duration)
                         else:
                             video_clip = video_clip.subclip(0, duration)
                 else:
-                    # Fallback to black screen if visual missing
                     video_clip = ColorClip(size=(target_w, target_h), color=(0,0,0), duration=duration)
 
-                # Resize and crop to target aspect ratio
-                # 1. Resize to fill the target dimensions (preserving aspect ratio)
+                # Consistent resize/crop to target dimensions
                 if video_clip.w / video_clip.h > target_w / target_h:
-                    # Video is wider than target
                     video_clip = video_clip.resize(height=target_h)
                 else:
-                    # Video is taller than target
                     video_clip = video_clip.resize(width=target_w)
                 
-                # 2. Center crop
-                video_clip = video_clip.crop(
-                    x_center=video_clip.w/2, 
-                    y_center=video_clip.h/2, 
-                    width=target_w, 
-                    height=target_h
-                )
-                
-                # Set Audio
+                video_clip = video_clip.crop(x_center=video_clip.w/2, y_center=video_clip.h/2, width=target_w, height=target_h)
                 video_clip = video_clip.set_audio(audio_clip)
+
+                # Add Crossfade Transition (except for the first clip)
+                if i > 0:
+                    video_clip = video_clip.crossfadein(0.5)
 
                 # Composite
                 if is_short:
-                    # Add Text Overlay (Simple Subtitle) for Shorts
-                    txt_w = int(target_w * 0.8)
+                    # Minimalist Cinematic Subtitles for Shorts
+                    txt_w = int(target_w * 0.9)
                     txt_clip = TextClip(
                         scene['text'], 
-                        fontsize=70, 
+                        fontsize=50, 
                         color='white', 
-                        font='Liberation-Sans-Bold', 
+                        font='Arial-Bold', 
                         stroke_color='black', 
-                        stroke_width=2, 
+                        stroke_width=1, 
                         size=(txt_w, None), 
                         method='caption'
                     )
-                    txt_clip = txt_clip.set_pos('center').set_duration(duration)
+                    # Position at the very bottom with slight padding
+                    txt_clip = txt_clip.set_pos(('center', target_h * 0.85)).set_duration(duration)
                     final_scene = CompositeVideoClip([video_clip, txt_clip])
                 else:
-                    # No text overlay for Long-form (Cinematic Style)
-                    final_scene = video_clip
+                    # Minimalist Subtitles for Long-form (Optional, but user asked for better experience)
+                    # We'll use a very subtle bottom subtitle
+                    txt_w = int(target_w * 0.8)
+                    txt_clip = TextClip(
+                        scene['text'], 
+                        fontsize=40, 
+                        color='white', 
+                        font='Arial', 
+                        size=(txt_w, None), 
+                        method='caption'
+                    )
+                    txt_clip = txt_clip.set_pos(('center', target_h * 0.9)).set_duration(duration)
+                    final_scene = CompositeVideoClip([video_clip, txt_clip])
                 
                 clips.append(final_scene)
                 
@@ -92,7 +114,19 @@ class VideoEditor:
                 print(f"Error processing scene: {e}")
         
         if clips:
-            final_video = concatenate_videoclips(clips)
-            final_video.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", temp_audiofile="temp_audio.m4a")
+            final_video = concatenate_videoclips(clips, method="compose")
+            
+            # Add Background Music if provided
+            if bg_music_path and os.path.exists(bg_music_path):
+                bg_audio = AudioFileClip(bg_music_path).volumex(0.08) # Lower volume (8%) for richer voiceover clarity
+                if bg_audio.duration < final_video.duration:
+                    bg_audio = bg_audio.loop(duration=final_video.duration)
+                else:
+                    bg_audio = bg_audio.subclip(0, final_video.duration)
+                
+                final_audio = CompositeAudioClip([final_video.audio, bg_audio])
+                final_video = final_video.set_audio(final_audio)
+
+            final_video.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", temp_audiofile="temp_audio.m4a", threads=4)
             return True
         return False

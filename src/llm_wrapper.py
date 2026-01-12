@@ -125,8 +125,9 @@ class LLMWrapper:
         STRICT RULES:
         1. Break the script into AT LEAST 25 detailed scenes for a high-quality visual experience.
         2. Visual Style: 'Surrealist Psychological Noir'. Use ink wash textures, moody watercolor, deep shadows, and metaphorical imagery.
-        3. NO REAL HUMANS: Use silhouettes, faceless figures, metaphorical objects (clocks, keys, mirrors), or abstract anatomical sketches.
+        3. NO REAL HUMANS: Use silhouettes, faceless figures, metaphorical objects (clocks, keys, mirrors), or abstract anatomical sketches. THIS IS CRITICAL.
         4. Tone: Deep, narrative-driven, and emotionally resonant.
+        5. Visual Continuity: Maintain a consistent atmospheric color palette throughout all scenes.
 
         STRICT OUTPUT FORMAT (Valid JSON ONLY):
         {{
@@ -135,7 +136,7 @@ class LLMWrapper:
             "scenes": [
                 {{
                     "text": "The spoken narration...",
-                    "visual_prompt": "A surrealist ink wash of [metaphor], psychological noir style, deep shadows, no real humans, 8k"
+                    "visual_prompt": "A surrealist ink wash of [metaphor], psychological noir style, deep shadows, no real humans, high contrast, cinematic lighting, 8k"
                 }},
                 ... (repeat for 25+ scenes)
             ]
@@ -159,10 +160,11 @@ class LLMWrapper:
         Objective: Create a 60-second viral psychology short script.
         
         STRICT RULES:
-        1. Break the script into EXACTLY 12 scenes for fast-paced visuals.
+        1. Break the script into EXACTLY 18 scenes for fast-paced, high-engagement visuals.
         2. Visual Style: 'Surrealist Psychological Noir'. Ink wash, moody watercolor, metaphorical.
-        3. NO REAL HUMANS: Use silhouettes, abstract figures, or metaphorical symbols.
+        3. NO REAL HUMANS: Use silhouettes, abstract figures, or metaphorical symbols. DO NOT INCLUDE FACES.
         4. Tone: Captivating and fast-paced.
+        5. Visual Continuity: Ensure every scene feels like part of the same dark, surreal world.
 
         Return ONLY Valid JSON.
         {{
@@ -170,7 +172,7 @@ class LLMWrapper:
             "scenes": [
                 {{
                     "text": "spoken text (approx 5 seconds)...",
-                    "visual_prompt": "A cinematic, psychological noir illustration of [metaphor], surreal ink textures, no humans, 8k"
+                    "visual_prompt": "A cinematic, psychological noir illustration of [metaphor], surreal ink textures, no humans, atmospheric lighting, 8k"
                 }},
                 ... (repeat for 12 scenes)
             ]
