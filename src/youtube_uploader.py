@@ -26,7 +26,7 @@ class YouTubeUploader:
             logger.error(f"Failed to authenticate with YouTube: {e}")
             raise
 
-    def upload_video(self, video_path, title, description, privacy_status="private"):
+    def upload_video(self, video_path, title, description, tags=None, privacy_status="private", publish_at=None):
         try:
             logger.info(f"Uploading video: {title}")
             
@@ -34,15 +34,16 @@ class YouTubeUploader:
                 'snippet': {
                     'title': title,
                     'description': description,
-                    'tags': ['Psychology', 'Human Behavior', 'Mental Health', 'Deep Secrets', 'Archetypes', 'Healing'],
+                    'tags': tags if tags else ['Psychology', 'Education', 'Mental Health'],
                     'categoryId': '27' # Education
                 },
                 'status': {
-                    'privacyStatus': privacy_status,
-                    'selfDeclaredMadeForKids': False
+                    'privacyStatus': privacy_status if not publish_at else 'private',
+                    'selfDeclaredMadeForKids': False,
+                    'publishAt': publish_at # ISO 8601 format: YYYY-MM-DDThh:mm:ss.sZ
                 }
             }
-
+            
             # MediaFileUpload handles the file upload
             media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
 
@@ -64,6 +65,51 @@ class YouTubeUploader:
         except Exception as e:
             logger.error(f"Failed to upload video: {e}")
             return None
+
+    def add_comment(self, video_id, text):
+        """Adds a top-level comment to a video."""
+        try:
+            request = self.youtube.commentThreads().insert(
+                part="snippet",
+                body={
+                    "snippet": {
+                        "videoId": video_id,
+                        "topLevelComment": {
+                            "snippet": {
+                                "textOriginal": text
+                            }
+                        }
+                    }
+                }
+            )
+            response = request.execute()
+            comment_id = response['snippet']['topLevelComment']['id']
+            logger.info(f"Comment added. ID: {comment_id}")
+            return comment_id
+        except Exception as e:
+            logger.warning(f"Failed to add comment: {e}")
+            return None
+
+    def pin_comment(self, comment_id):
+        """Pins a comment (requires high-level scope)."""
+        try:
+            request = self.youtube.comments().setAttributes(
+                id=comment_id,
+                part="snippet",
+                body={
+                    "snippet": {
+                        "viewerRating": "none",
+                        "isPinned": True
+                    }
+                }
+            )
+            request.execute()
+            logger.info(f"Comment {comment_id} pinned.")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to pin comment: {e} (This usually requires force-ssl scope)")
+            return False
+
     def set_thumbnail(self, video_id, thumbnail_path):
         """Uploads a custom thumbnail for a video."""
         try:

@@ -102,39 +102,57 @@ async def main():
     
     if success:
         logger.info(f"Video generated successfully: {output_file}")
+
+        # Prepare SEO Metadata
+        video_title = script_data.get('title', args.topic)
+        seo_description = script_data.get('description', f"{video_title}\n\n#Psychology #Archetypes")
+        if args.type == "long" and 'chapters' in script_data:
+            seo_description += "\n\nChapters:\n" + "\n".join(script_data['chapters'])
+        
+        seo_tags = script_data.get('tags', ['Psychology', 'Education'])
+        
+        # Preparation for Scheduling
+        from datetime import datetime, timedelta
+        # Schedule for 12 hours from now
+        schedule_date = datetime.utcnow() + timedelta(hours=12)
+        publish_at = schedule_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        if not args.dry_run:
+            # 4. Upload to YouTube
+            logger.info("Starting Upload Process...")
+            try:
+                uploader = YouTubeUploader()
+                
+                # Generate Thumbnail
+                ensure_dir_exists("assets/thumbnails")
+                thumbnail_path = f"assets/thumbnails/thumb_{args.type}.jpg"
+                logger.info(f"Generating Thumbnail for {video_title}...")
+                asset_mgr.generate_thumbnail(video_title, thumbnail_path)
+                
+                video_id = uploader.upload_video(
+                    output_file, 
+                    video_title, 
+                    seo_description, 
+                    tags=seo_tags,
+                    publish_at=publish_at
+                )
+
+                if video_id and os.path.exists(thumbnail_path):
+                    uploader.set_thumbnail(video_id, thumbnail_path)
+                    
+                    # Add and Pin Engagement Comment
+                    comment_text = "How was the video? Comment 'Ready' below if you reached the end! 👇"
+                    comment_id = uploader.add_comment(video_id, comment_text)
+                    if comment_id:
+                        uploader.pin_comment(video_id, comment_id) # YouTube API requires video_id for pinning
+                        
+                    logger.info(f"Successfully uploaded, scheduled for {publish_at}, and set thumbnail/comment: https://youtu.be/{video_id}")
+                elif video_id:
+                    logger.info(f"Successfully uploaded video: https://youtu.be/{video_id}")
+            except Exception as e:
+                logger.error(f"Upload process failed: {e}")
     else:
         logger.error("Video generation failed")
-
-    if not args.dry_run and success:
-        # 4. Upload to YouTube
-        logger.info("Starting Upload Process...")
-        try:
-            uploader = YouTubeUploader()
-            
-            # Generate Thumbnail
-            ensure_dir_exists("assets/thumbnails")
-            thumbnail_path = f"assets/thumbnails/thumb_{args.type}.jpg"
-            logger.info(f"Generating Thumbnail for {title}...")
-            asset_mgr.generate_thumbnail(title, thumbnail_path)
-
-            description = script_data.get('description')
-            if not description:
-                description = f"{script_data.get('title')}\n\n#Psychology #Archetypes"
-            
-            video_id = uploader.upload_video(
-                output_file, 
-                script_data.get('title'), 
-                description, 
-                privacy_status="public"
-            )
-
-            if video_id and os.path.exists(thumbnail_path):
-                uploader.set_thumbnail(video_id, thumbnail_path)
-                logger.info(f"Successfully uploaded video and set thumbnail: https://youtu.be/{video_id}")
-            elif video_id:
-                logger.info(f"Successfully uploaded video: https://youtu.be/{video_id}")
-        except Exception as e:
-            logger.error(f"Upload process failed: {e}")
 
 if __name__ == "__main__":
     try:

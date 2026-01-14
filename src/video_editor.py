@@ -95,18 +95,39 @@ class VideoEditor:
                             # 1. Floating: Vertical sway ±15px over 3 seconds
                             # 2. Breathing: Subtle scaling ±1.5% over 4 seconds
                             
-                            # Apply Floating (Vertical Sway)
-                            video_clip = img_clip.set_position(lambda t: ('center', (target_h/2 - img_clip.h/2) + 15 * math.sin(2 * math.pi * 0.33 * t)))
+                            v_action = scene.get('vocal_action', 'talking')
+                            
+                            # Base floating position
+                            base_pos = lambda t: ('center', (target_h/2 - img_clip.h/2) + 15 * math.sin(2 * math.pi * 0.33 * t))
+                            
+                            # ACTION-AWARE OVERRIDES:
+                            if v_action == 'jumping':
+                                # Intense vertical bounce
+                                video_clip = img_clip.set_position(lambda t: ('center', (target_h/2 - img_clip.h/2) - abs(100 * math.sin(2 * math.pi * 0.8 * t))))
+                            elif v_action == 'waving':
+                                # Smooth rotation sway
+                                video_clip = img_clip.rotate(lambda t: 5 * math.sin(2 * math.pi * 0.5 * t)).set_position(base_pos)
+                            elif v_action == 'shaking':
+                                # High frequency jitter
+                                video_clip = img_clip.set_position(lambda t: ('center', (target_h/2 - img_clip.h/2) + random.uniform(-10, 10)))
+                            elif v_action == 'bouncing':
+                                # Scale-based bounce
+                                video_clip = img_clip.resize(lambda t: 1.0 + 0.1 * abs(math.sin(2 * math.pi * 0.7 * t))).set_position(base_pos)
+                            else:
+                                # Default Floating
+                                video_clip = img_clip.set_position(base_pos)
                             
                             # Apply Breathing (Slow Scaling)
-                            video_clip = video_clip.resize(lambda t: 1.0 + 0.015 * math.sin(2 * math.pi * 0.25 * t))
+                            if v_action != 'bouncing':
+                                video_clip = video_clip.resize(lambda t: 1.0 + 0.015 * math.sin(2 * math.pi * 0.25 * t))
                             
                             # Fade In / Fade Out
-                            video_clip = video_clip.set_position('center').fadein(0.5).fadeout(0.5)
+                            video_clip = video_clip.fadein(0.5).fadeout(0.5)
                             
-                            # NO FILTERS for stickman to keep background pure white
+                            # Composite over white background
                             video_clip = CompositeVideoClip([bg_clip, video_clip.set_start(0)])
                             
+                            # NO FILTERS for stickman to keep background pure white
                         else:
                             # NOIR STYLE: Standard animated visuals
                             anim_type = random.choice(['zoom_in', 'zoom_out', 'pan_left', 'pan_right'])

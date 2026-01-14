@@ -42,7 +42,7 @@ class AssetManager:
         import urllib.parse
         
         # Add flavor tags to the prompt to ensure rich, purely animated visuals
-        enhanced_prompt = f"{prompt}, centered composition, detailed textures, volumetric lighting, high dynamic range, digital art style, no people, no real humans"
+        enhanced_prompt = f"{prompt}, centered composition, detailed textures, volumetric lighting, high dynamic range, digital art style, no people, no real humans, no text, no qr code, no watermark"
         encoded_prompt = urllib.parse.quote(enhanced_prompt)
         
         # Dimensions for Pollinations

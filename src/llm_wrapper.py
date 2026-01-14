@@ -189,32 +189,35 @@ class LLMWrapper:
             print(f"Error parsing short script: {e}")
             return None
     def generate_conversational_script(self, topic, type="short"):
-        """Generates a conversational, humorous, human-like script with stick figure visual prompts."""
+        """Generates a high-SEO, human-like script with dynamic stickman movements."""
         char_count = "7000-9000" if type == "long" else "600-800"
         scene_count = 25 if type == "long" else 12
         
         prompt = f"""
         Topic: {topic}
-        Role: A charismatic YouTube storyteller who is funny, relatable, and easy to understand.
+        Role: A charismatic YouTube storyteller/psychologist who is funny, relatable, and high-energy.
         
         STRICT RULES:
-        1. Tone: Fully human-made, conversational, natural language. No robot-speak.
-        2. Hook: Start with a powerful, relatable hook that grabs attention instantly.
-        3. Humor: Add light humor and simple real-life examples throughout.
-        4. Curiosity: Keep the audience curious until the very end.
-        5. Visual Style: STICK FIGURE STYLE on a PLAIN WHITE BACKGROUND. Minimalist and clean black lines.
-        6. Length: Around {char_count} characters.
-        7. Visual Relevancy: Every 'visual_prompt' MUST be a unique, relatable, and creative illustration of the specific spoken 'text' for that scene. Avoid repetitive actions. If the text mentions 'thinking', show the stick figure with a giant brain. If it mentions 'busy', show multiple arms. Be metaphorical and funny.
-        8. Vocal Emotions: Assign an 'audio_mood' to every scene (excited, serious, whispering, curious, neutral). Use expressive punctuation like "..." for pauses and "!!!" for excitement in the 'text'.
+        1. SEO Metadata: Provide a viral title, keyword-rich tags, and a detailed description.
+        2. Chapters (Long-form only): Create curiosity-driven chapters starting at 00:00 (e.g., "00:00 Why do we feel this?"). Use questions.
+        3. End Hook: The FINAL scene must be a powerful Call to Action (CTA) asking viewers to comment "Ready" if they reached the end.
+        4. No Watermarks: NEVER mention text, QR codes, or watermarks in visual_prompt.
+        5. Script-Aware Animation: Assign a 'vocal_action' to every scene from this list: [jumping, waving, bouncing, shaking, talking, thinking, walking].
+        6. Vocal Emotions: Assign 'audio_mood' (excited, serious, whispering, curious, neutral). Use expressive punctuation.
+        7. Tone: Conversational, simple, and funny.
         
         FORMAT (Valid JSON ONLY):
         {{
             "title": "{topic}",
+            "description": "Premium SEO description with keywords...",
+            "tags": ["psychology", "mindset", ...],
+            "chapters": ["00:00 Hook", "01:30 The Secret", ...],
             "scenes": [
                 {{
-                    "text": "spoken narration (use expressive punctuation!)...",
-                    "audio_mood": "excited/serious/whispering/curious/neutral",
-                    "visual_prompt": "A minimalist simple black stick figure on a plain white background [creative action relatable to the text above], doodle style, clean lines, no background details"
+                    "text": "spoken narration...",
+                    "audio_mood": "excited",
+                    "vocal_action": "jumping",
+                    "visual_prompt": "A minimalist black stick figure on PLAIN WHITE background [action], doodle style, clean lines, NO TEXT, NO QR CODE"
                 }},
                 ... (repeat for {scene_count} scenes)
             ]
