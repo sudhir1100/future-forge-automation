@@ -203,8 +203,9 @@ class LLMWrapper:
         3. End Hook: The FINAL scene must be a powerful Call to Action (CTA) asking viewers to comment "Ready" if they reached the end.
         4. No Watermarks: NEVER mention text, QR codes, or watermarks in visual_prompt.
         5. Script-Aware Animation: Assign a 'vocal_action' to every scene from this list: [jumping, waving, bouncing, shaking, talking, thinking, walking].
-        6. Vocal Emotions: Assign 'audio_mood' (excited, serious, whispering, curious, neutral). Use expressive punctuation.
+        6. Vocal Emotions: Assign 'audio_mood' (excited, serious, whispering, curious, neutral). Use expressive punctuation (commas, periods, exclamation marks) to guide the AI's pacing and emotion.
         7. Tone: Conversational, simple, and funny.
+        8. Visual Specificity: In 'visual_prompt', explicitly describe the stickman's action AND the context of the scene (e.g., "A stickman scratching head in confusion because of X"). Ensure the visual perfectly matches the spoken text.
         
         FORMAT (Valid JSON ONLY):
         {{

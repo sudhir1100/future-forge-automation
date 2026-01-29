@@ -173,8 +173,10 @@ class VideoEditor:
 
                 video_clip = video_clip.set_audio(audio_clip)
 
-                if i > 0 and style != "stickman": # Crossfade only for noir/standard
-                    video_clip = video_clip.crossfadein(0.5)
+                if i > 0:
+                    # Apply professional transitions
+                    # Crossfade works well for both Noir (dark) and Stickman (white)
+                    video_clip = video_clip.crossfadein(0.6)
 
                 # Subtitles / Captions
                 txt_h = 400
@@ -224,6 +226,8 @@ class VideoEditor:
                 final_audio = CompositeAudioClip([final_video.audio, bg_audio])
                 final_video = final_video.set_audio(final_audio)
 
-            final_video.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac", temp_audiofile="temp_audio.m4a", threads=4)
+            print("Rendering video...")
+            final_video.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac", temp_audiofile="temp_audio.m4a", threads=1)
+            print("Video rendering complete.")
             return True
         return False
